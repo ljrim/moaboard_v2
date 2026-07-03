@@ -1,0 +1,2631 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>모아보드 MoaBoard - 개인용 자산관리 대시보드</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind Config for Dark Theme & custom colors -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            bgDark: '#0D0E11',
+            surfaceDark: '#16181D',
+            surfaceDarkLighter: '#20242C',
+            accentTeal: '#1D9E75',
+            assetStock: '#378ADD',
+            assetBond: '#1D9E75',
+            assetGold: '#EF9F27',
+            assetCash: '#888780',
+            increaseGreen: '#22C55E',
+            decreaseRed: '#EF4444'
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Font Awesome Icons for premium dashboard experience -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- SheetJS (xlsx) for full backup/restore functionality -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+    body {
+      font-family: 'Inter', 'Noto Sans KR', sans-serif;
+      background-color: #0D0E11;
+      color: #E2E8F0;
+    }
+    /* Tabular figures for aligned financial numbers */
+    .font-num {
+      font-variant-numeric: tabular-nums;
+    }
+    /* Simple custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #16181D;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2D3748;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4A5568;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col md:flex-row">
+
+  <!-- Desktop Sidebar Navigation (Hidden on Mobile) -->
+  <aside class="hidden md:flex flex-col w-64 bg-surfaceDark border-r border-gray-800 p-5 shrink-0">
+    <div class="flex items-center gap-3 mb-8">
+      <div class="w-10 h-10 rounded-xl bg-accentTeal flex items-center justify-center text-white shadow-lg">
+        <i class="fa-solid fa-chart-line text-lg"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-lg text-white leading-tight">모아보드</h1>
+        <span class="text-xs text-gray-400">MoaBoard v1.0</span>
+      </div>
+    </div>
+
+    <!-- Navigation Menu -->
+    <nav class="flex-1 space-y-1">
+      <button onclick="switchView('dashboard')" data-nav="dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition text-left text-sm text-gray-400 hover:bg-gray-800 hover:text-white">
+        <i class="fa-solid fa-house w-5 text-center"></i>
+        <span>대시보드</span>
+      </button>
+      <button onclick="switchView('trends')" data-nav="trends" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition text-left text-sm text-gray-400 hover:bg-gray-800 hover:text-white">
+        <i class="fa-solid fa-chart-area w-5 text-center"></i>
+        <span>자산 추이</span>
+      </button>
+      <button onclick="switchView('goals')" data-nav="goals" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition text-left text-sm text-gray-400 hover:bg-gray-800 hover:text-white">
+        <i class="fa-solid fa-bullseye w-5 text-center"></i>
+        <span>목표 관리</span>
+      </button>
+      <button onclick="switchView('assets')" data-nav="assets" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition text-left text-sm text-gray-400 hover:bg-gray-800 hover:text-white">
+        <i class="fa-solid fa-wallet w-5 text-center"></i>
+        <span>자산 관리</span>
+      </button>
+      <button onclick="switchView('rebalance')" data-nav="rebalance" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition text-left text-sm text-gray-400 hover:bg-gray-800 hover:text-white">
+        <i class="fa-solid fa-scale-balanced w-5 text-center"></i>
+        <span>리밸런싱</span>
+      </button>
+      <button onclick="switchView('settings')" data-nav="settings" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition text-left text-sm text-gray-400 hover:bg-gray-800 hover:text-white">
+        <i class="fa-solid fa-gear w-5 text-center"></i>
+        <span>설정 및 데이터</span>
+      </button>
+    </nav>
+
+    <!-- App Info Card at bottom of sidebar -->
+    <div class="mt-auto p-4 bg-bgDark rounded-xl border border-gray-800 text-xs text-gray-400">
+      <p class="font-medium text-gray-300 mb-1">안전한 로컬 자산 관리</p>
+      <p>모든 데이터는 서버로 전송되지 않고 개인 디바이스 내에만 안전하게 보관됩니다.</p>
+    </div>
+  </aside>
+
+  <!-- Mobile Header -->
+  <header class="md:hidden bg-surfaceDark border-b border-gray-800 px-4 py-3 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-lg bg-accentTeal flex items-center justify-center text-white">
+        <i class="fa-solid fa-chart-line text-sm"></i>
+      </div>
+      <h1 class="font-bold text-base text-white">모아보드</h1>
+    </div>
+    <span class="text-xs text-gray-400 font-num bg-bgDark px-2 py-1 rounded">v1.0</span>
+  </header>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 flex flex-col min-h-0 overflow-y-auto pb-24 md:pb-6">
+    <div class="p-4 md:p-8 max-w-6xl w-full mx-auto space-y-6">
+      
+      <!-- F6 Rebalancing Notification Banner (Dynamic) -->
+      <div id="rebalance-banner" class="hidden bg-gradient-to-r from-teal-900 to-bgDark border border-accentTeal/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+        <div class="flex gap-3">
+          <div class="w-10 h-10 rounded-xl bg-accentTeal/20 flex items-center justify-center text-accentTeal shrink-0 mt-1 sm:mt-0">
+            <i class="fa-solid fa-scale-balanced text-lg"></i>
+          </div>
+          <div>
+            <h4 class="font-bold text-white text-sm">연간 자산배분 리밸런싱 시점입니다! (7월 말)</h4>
+            <p class="text-xs text-gray-400 mt-0.5">사용자가 등록한 목표 자산군 비중과 현재 비중을 나란히 비교해 조정안을 분석해보세요.</p>
+          </div>
+        </div>
+        <button onclick="switchView('rebalance')" class="bg-accentTeal hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shrink-0">
+          분석 도우미 보기
+        </button>
+      </div>
+
+      <!-- VIEW: DASHBOARD (Default) -->
+      <section id="view-dashboard" class="app-view space-y-6">
+        <!-- Dashboard Top Header Section -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl md:text-2xl font-bold text-white">종합 자산 대시보드</h2>
+            <p class="text-xs text-gray-400 mt-1">여러 계좌에 분산된 자산과 목표 진행 상태를 한번에 관리합니다.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <!-- Snapshot Month Picker -->
+            <label for="snapshot-month" class="text-xs text-gray-400 mr-1">스냅샷 선택</label>
+            <select id="snapshot-month" onchange="loadSnapshotData()" class="bg-surfaceDark border border-gray-800 text-sm text-gray-300 rounded-xl px-3 py-2 focus:ring-1 focus:ring-accentTeal focus:outline-none">
+              <!-- Dynamically populated -->
+            </select>
+            <button onclick="openSnapshotEntryModal()" class="bg-accentTeal hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5">
+              <i class="fa-solid fa-pen-to-square"></i>
+              <span>이번 달 잔액 입력</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- F1/F2 Totals Hero Stats Block -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <!-- Total Asset Hero -->
+          <div class="bg-surfaceDark p-5 rounded-2xl border border-gray-800/80">
+            <span class="text-xs font-medium text-gray-400">이번 달 총자산</span>
+            <div id="hero-total-assets" class="text-2xl md:text-3xl font-bold text-white mt-1.5 font-num">₩0</div>
+            <div id="hero-assets-change" class="text-xs font-num mt-1 flex items-center gap-1 text-gray-400">
+              -
+            </div>
+          </div>
+          <!-- Realtime Goal Target Achievement -->
+          <div class="bg-surfaceDark p-5 rounded-2xl border border-gray-800/80">
+            <span class="text-xs font-medium text-gray-400">우선순위 1순위 목표 진행률</span>
+            <div id="hero-goal-progress" class="text-2xl md:text-3xl font-bold text-white mt-1.5 font-num">0%</div>
+            <div class="w-full bg-gray-800 rounded-full h-1.5 mt-2">
+              <div id="hero-goal-bar" class="bg-accentTeal h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+          <!-- Monthly Savings Reverse Calculation -->
+          <div class="bg-surfaceDark p-5 rounded-2xl border border-gray-800/80">
+            <span class="text-xs font-medium text-gray-400">이번 달 총 필요 저축액</span>
+            <div id="hero-monthly-needed" class="text-2xl md:text-3xl font-bold text-white mt-1.5 font-num text-amber-400">₩0</div>
+            <p class="text-[10px] text-gray-400 mt-1">목표 달성까지 역산된 월 저축 요구량</p>
+          </div>
+        </div>
+
+        <!-- Charts Grid (Asset Allocation Visualization) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- F1: Asset Group Allocation (Donut Chart) -->
+          <div class="bg-surfaceDark p-6 rounded-2xl border border-gray-800/80 flex flex-col">
+            <h3 class="font-bold text-white text-sm mb-4 flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-assetStock"></span> 자산군별 비중 구성
+            </h3>
+            <div class="flex-1 flex flex-col sm:flex-row items-center justify-center gap-6 py-4">
+              <!-- SVG Donut Chart container -->
+              <div class="relative w-40 h-40">
+                <svg viewBox="0 0 42 42" class="w-full h-full transform -rotate-90">
+                  <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#232730" stroke-width="4.5"></circle>
+                  <circle id="donut-segment-stock" cx="21" cy="21" r="15.915" fill="transparent" stroke="#378ADD" stroke-width="4.5" stroke-dasharray="0 100" stroke-dashoffset="0" class="transition-all duration-700"></circle>
+                  <circle id="donut-segment-bond" cx="21" cy="21" r="15.915" fill="transparent" stroke="#1D9E75" stroke-width="4.5" stroke-dasharray="0 100" stroke-dashoffset="0" class="transition-all duration-700"></circle>
+                  <circle id="donut-segment-gold" cx="21" cy="21" r="15.915" fill="transparent" stroke="#EF9F27" stroke-width="4.5" stroke-dasharray="0 100" stroke-dashoffset="0" class="transition-all duration-700"></circle>
+                  <circle id="donut-segment-cash" cx="21" cy="21" r="15.915" fill="transparent" stroke="#888780" stroke-width="4.5" stroke-dasharray="0 100" stroke-dashoffset="0" class="transition-all duration-700"></circle>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span class="text-[10px] text-gray-400 uppercase tracking-wider">주식 비중</span>
+                  <span id="donut-center-stock-pct" class="font-bold text-lg text-white font-num">0%</span>
+                </div>
+              </div>
+              <!-- Legend & Breakdown -->
+              <div class="flex-1 w-full space-y-2.5 text-xs">
+                <div class="flex items-center justify-between text-gray-300">
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-assetStock"></span>
+                    <span>주식 (Stock)</span>
+                  </div>
+                  <span id="legend-stock-val" class="font-bold font-num">₩0 (0%)</span>
+                </div>
+                <div class="flex items-center justify-between text-gray-300">
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-assetBond"></span>
+                    <span>채권 (Bond)</span>
+                  </div>
+                  <span id="legend-bond-val" class="font-bold font-num">₩0 (0%)</span>
+                </div>
+                <div class="flex items-center justify-between text-gray-300">
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-assetGold"></span>
+                    <span>금 (Gold)</span>
+                  </div>
+                  <span id="legend-gold-val" class="font-bold font-num">₩0 (0%)</span>
+                </div>
+                <div class="flex items-center justify-between text-gray-300">
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-assetCash"></span>
+                    <span>현금 (Cash)</span>
+                  </div>
+                  <span id="legend-cash-val" class="font-bold font-num">₩0 (0%)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- F1: Accounts Portfolio Breakdown -->
+          <div class="bg-surfaceDark p-6 rounded-2xl border border-gray-800/80 flex flex-col">
+            <h3 class="font-bold text-white text-sm mb-4">계좌별 자산 구성비</h3>
+            <div id="dashboard-account-bars" class="flex-1 flex flex-col justify-center space-y-3">
+              <!-- Dynamically rendered custom horizontal chart bars -->
+            </div>
+          </div>
+        </div>
+
+        <!-- F3: Goals Mini Overview Trackers -->
+        <div class="bg-surfaceDark p-6 rounded-2xl border border-gray-800/80">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-white text-sm">내 목표 현황 (우선순위 순)</h3>
+            <button onclick="switchView('goals')" class="text-xs text-accentTeal hover:underline">목표 관리하기 <i class="fa-solid fa-angle-right"></i></button>
+          </div>
+          <div id="dashboard-goals-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Dynamically populated target goal progress summary cards -->
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: ASSET TRENDS -->
+      <section id="view-trends" class="app-view hidden space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl md:text-2xl font-bold text-white">월별 자산 추이</h2>
+            <p class="text-xs text-gray-400 mt-1">누적된 스냅샷 기록을 기준으로 순자산 변화 흐름을 파악합니다.</p>
+          </div>
+          <!-- Time Interval filters -->
+          <div class="flex bg-surfaceDark p-1 rounded-xl border border-gray-800">
+            <button onclick="setTrendPeriod(6)" id="trend-p-6" class="p-filter-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-white bg-accentTeal">6개월</button>
+            <button onclick="setTrendPeriod(12)" id="trend-p-12" class="p-filter-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-gray-400 hover:text-white">12개월</button>
+            <button onclick="setTrendPeriod(0)" id="trend-p-all" class="p-filter-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-gray-400 hover:text-white">전체</button>
+          </div>
+        </div>
+
+        <!-- Asset Trends Stats Dashboard -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bg-surfaceDark p-4 rounded-xl border border-gray-800">
+            <span class="text-xs text-gray-400">현재 누적 자산</span>
+            <div id="trends-stat-current" class="text-xl font-bold text-white mt-1 font-num">₩0</div>
+          </div>
+          <div class="bg-surfaceDark p-4 rounded-xl border border-gray-800">
+            <span class="text-xs text-gray-400">조회 기간 내 총 증감</span>
+            <div id="trends-stat-change" class="text-xl font-bold text-white mt-1 font-num">-</div>
+          </div>
+          <div class="bg-surfaceDark p-4 rounded-xl border border-gray-800">
+            <span class="text-xs text-gray-400">조회 기간 월평균 증가액</span>
+            <div id="trends-stat-average" class="text-xl font-bold text-white mt-1 font-num">-</div>
+          </div>
+        </div>
+
+        <!-- F2: Trends Line Graph (SVG Custom Generated) -->
+        <div class="bg-surfaceDark p-6 rounded-2xl border border-gray-800/80">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-white text-sm">순자산 변화 추이</h3>
+            <div class="flex items-center gap-2">
+              <span class="inline-block w-3 h-3 bg-accentTeal rounded-sm"></span>
+              <span class="text-xs text-gray-400">총 자산 총액</span>
+            </div>
+          </div>
+          
+          <div id="trends-chart-container" class="relative w-full h-64 bg-bgDark/40 rounded-xl border border-gray-800/40 flex items-center justify-center overflow-hidden">
+            <!-- Dynamic SVG graph or Placeholder -->
+          </div>
+        </div>
+
+        <!-- Historical Data Table Log -->
+        <div class="bg-surfaceDark rounded-2xl border border-gray-800/80 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800">
+            <h3 class="font-bold text-white text-sm">자산 현황 히스토리</h3>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-bgDark/50 text-gray-400 border-b border-gray-800">
+                  <th class="p-4 font-semibold">기준 월</th>
+                  <th class="p-4 font-semibold text-right">총 자산</th>
+                  <th class="p-4 font-semibold text-right">전월 대비 증감</th>
+                  <th class="p-4 font-semibold text-right">증감률</th>
+                </tr>
+              </thead>
+              <tbody id="trends-history-table" class="divide-y divide-gray-800/60 font-num">
+                <!-- Dynamically populated table log -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: GOALS MANAGEMENT -->
+      <section id="view-goals" class="app-view hidden space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl md:text-2xl font-bold text-white">목표 및 배분 관리</h2>
+            <p class="text-xs text-gray-400 mt-1">목표 카드를 드래그 또는 위/아래 버튼으로 이동해 우선순위를 변경하면 자산의 워터폴 분배가 실시간 반영됩니다.</p>
+          </div>
+          <button onclick="openGoalModal()" class="bg-accentTeal hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5">
+            <i class="fa-solid fa-plus"></i>
+            <span>목표 추가</span>
+          </button>
+        </div>
+
+        <!-- Info Notification Bar regarding priority calculations -->
+        <div class="p-3 bg-bgDark border border-gray-800 rounded-xl text-xs text-gray-400 flex items-center gap-2">
+          <i class="fa-solid fa-info-circle text-accentTeal text-sm"></i>
+          <span><b>우선순위 역산 시스템 (F7 Waterfall):</b> 여러 목표가 공유하는 자산은 상위 순위 목표의 부족분을 우선적으로 채운 후, 남은 자투리 금액을 차순위 목표로 내려보냅니다.</span>
+        </div>
+
+        <!-- Drag/Sort List Container of Goal Cards -->
+        <div id="goals-list" class="space-y-4">
+          <!-- Dynamically populated list of priority goal cards -->
+        </div>
+      </section>
+
+      <!-- VIEW: GOALS DETAILS (Inner-view for analytical detail of single goal) -->
+      <section id="view-goal-detail" class="app-view hidden space-y-6">
+        <button onclick="switchView('goals')" class="text-xs text-gray-400 hover:text-white flex items-center gap-1">
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>목표 목록으로 돌아가기</span>
+        </button>
+
+        <div id="goal-detail-content" class="space-y-6">
+          <!-- Dynamically loaded detail context -->
+        </div>
+      </section>
+
+      <!-- VIEW: ASSETS/ACCOUNTS MANAGEMENT -->
+      <section id="view-assets" class="app-view hidden space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl md:text-2xl font-bold text-white">자산 및 계좌 구성 관리</h2>
+            <p class="text-xs text-gray-400 mt-1">보유 계좌를 생성하고, 계좌 내부 자산을 자산군 및 가용성 등급 기준으로 등록합니다.</p>
+          </div>
+          <button onclick="openAccountModal()" class="bg-accentTeal hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5">
+            <i class="fa-solid fa-plus"></i>
+            <span>계좌 추가</span>
+          </button>
+        </div>
+
+        <!-- Accounts Grid with Asset CRUDs inside -->
+        <div id="assets-accounts-list" class="grid grid-cols-1 gap-6">
+          <!-- Rendered Accounts and Inner assets details list -->
+        </div>
+      </section>
+
+      <!-- VIEW: PORTFOLIO REBALANCING -->
+      <section id="view-rebalance" class="app-view hidden space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl md:text-2xl font-bold text-white">리밸런싱 도우미 (F6)</h2>
+            <p class="text-xs text-gray-400 mt-1">사용자가 설정한 목표 자산 배분 비중에 맞춰 현재 리밸런싱 대상 자산과의 괴리율 및 매수/매도 필요 금액을 안내합니다.</p>
+          </div>
+          <button onclick="openRebalanceConfigModal()" class="bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5">
+            <i class="fa-solid fa-sliders"></i>
+            <span>목표 비중 설정</span>
+          </button>
+        </div>
+
+        <!-- F6 Logic explanation notice -->
+        <div class="p-4 bg-bgDark border border-gray-800 rounded-xl text-xs text-gray-400 space-y-1">
+          <p class="font-semibold text-gray-300">💡 리밸런싱 계산 범위 제한 규칙</p>
+          <p>유동적으로 조정이 불가능하거나 특정 목적에만 묶여 있는 비유동·목표 전용 자산들을 제외하기 위해, <b>'리밸런싱 포함' 토글이 켜진 자산</b>들만 취합해 산정합니다. (연금저축, 장기 부동산 등은 실시간 리밸런싱 비조정 대상으로 분리 가능)</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Ratio Chart Breakdown Comparison -->
+          <div class="bg-surfaceDark p-6 rounded-2xl border border-gray-800/80">
+            <h3 class="font-bold text-white text-sm mb-4">현재 비중 vs 목표 비중 비교</h3>
+            
+            <div id="rebalance-ratio-chart" class="space-y-4">
+              <!-- Dynamically populated progress comparisons -->
+            </div>
+          </div>
+
+          <!-- Adjustments analysis breakdown list -->
+          <div class="bg-surfaceDark p-6 rounded-2xl border border-gray-800/80 flex flex-col">
+            <h3 class="font-bold text-white text-sm mb-3">자산군별 매매 조정 내역</h3>
+            <p class="text-xs text-gray-400 mb-4">목표 비중에 가깝게 맞추기 위해 현재 리밸런싱 가능 자산총액 기준으로 필요한 가이드라인입니다.</p>
+
+            <div id="rebalance-recommendations" class="flex-1 space-y-3 justify-center flex flex-col">
+              <!-- Rebalance recommendations rendering -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: SETTINGS & EXCEL BACKUP -->
+      <section id="view-settings" class="app-view hidden space-y-6">
+        <div>
+          <h2 class="text-xl md:text-2xl font-bold text-white">설정 및 데이터 백업</h2>
+          <p class="text-xs text-gray-400 mt-1">자산 정보와 목표 설정 데이터를 다운로드하거나, 기존 백업된 엑셀 파일로부터 즉각 복구합니다.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Excel Export & Import Block -->
+          <div class="bg-surfaceDark p-6 rounded-2xl border border-gray-800/80 space-y-4">
+            <h3 class="font-bold text-white text-sm flex items-center gap-1.5">
+              <i class="fa-solid fa-file-excel text-green-500"></i>
+              <span>엑셀 연동 (F5 Backup/Restore)</span>
+            </h3>
+            <p class="text-xs text-gray-400 leading-relaxed">
+              모아보드는 프라이버시 보호를 위해 사용자 데이터를 별도 클라우드 데이터베이스에 보관하지 않습니다. 기기 분실이나 데이터 리셋에 대비해 수시로 엑셀(.xlsx) 파일 형태로 백업을 수행해 주세요.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-2 pt-2">
+              <button onclick="exportToExcel()" class="bg-accentTeal hover:bg-emerald-700 text-white text-xs font-bold px-4 py-3 rounded-xl transition flex-1 flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-download"></i>
+                <span>엑셀 파일로 내보내기</span>
+              </button>
+              <label class="bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold px-4 py-3 rounded-xl transition flex-1 flex items-center justify-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-upload"></i>
+                <span>엑셀 파일 불러오기</span>
+                <input type="file" id="excel-file-input" class="hidden" accept=".xlsx, .xls" onchange="importFromExcel(event)">
+              </label>
+            </div>
+          </div>
+
+          <!-- Danger Area (Factory Reset) -->
+          <div class="bg-surfaceDark p-6 rounded-2xl border border-gray-800/80 space-y-4">
+            <h3 class="font-bold text-white text-sm text-red-500 flex items-center gap-1.5">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <span>위험 구역</span>
+            </h3>
+            <p class="text-xs text-gray-400 leading-relaxed">
+              사용자 브라우저에 임시 캐싱 처리된 모든 자산 구성, 입력된 월말 스냅샷 데이터 및 설정된 자산 목표 배분 등이 전부 제거되고 공백 모아보드로 리셋됩니다. 작업 전 엑셀 백업을 받았는지 확인하세요.
+            </p>
+            <button onclick="triggerFactoryReset()" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold px-4 py-3 rounded-xl transition w-full flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-trash-can"></i>
+              <span>초기 데모 데이터 상태로 초기화</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Navigation Mobile Tabbar (Fixed Bottom) -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-surfaceDark border-t border-gray-800 px-2 py-2 flex items-center justify-around z-40 shrink-0">
+    <button onclick="switchView('dashboard')" data-nav-mobile="dashboard" class="nav-btn-mobile flex flex-col items-center gap-1 text-gray-400 py-1 transition-all duration-200">
+      <i class="fa-solid fa-house text-sm"></i>
+      <span class="text-[9px]">대시보드</span>
+    </button>
+    <button onclick="switchView('trends')" data-nav-mobile="trends" class="nav-btn-mobile flex flex-col items-center gap-1 text-gray-400 py-1 transition-all duration-200">
+      <i class="fa-solid fa-chart-area text-sm"></i>
+      <span class="text-[9px]">추이</span>
+    </button>
+    <button onclick="switchView('goals')" data-nav-mobile="goals" class="nav-btn-mobile flex flex-col items-center gap-1 text-gray-400 py-1 transition-all duration-200">
+      <i class="fa-solid fa-bullseye text-sm"></i>
+      <span class="text-[9px]">목표</span>
+    </button>
+    <button onclick="switchView('assets')" data-nav-mobile="assets" class="nav-btn-mobile flex flex-col items-center gap-1 text-gray-400 py-1 transition-all duration-200">
+      <i class="fa-solid fa-wallet text-sm"></i>
+      <span class="text-[9px]">자산</span>
+    </button>
+    <button onclick="switchView('rebalance')" data-nav-mobile="rebalance" class="nav-btn-mobile flex flex-col items-center gap-1 text-gray-400 py-1 transition-all duration-200">
+      <i class="fa-solid fa-scale-balanced text-sm"></i>
+      <span class="text-[9px]">리밸런싱</span>
+    </button>
+    <button onclick="switchView('settings')" data-nav-mobile="settings" class="nav-btn-mobile flex flex-col items-center gap-1 text-gray-400 py-1 transition-all duration-200">
+      <i class="fa-solid fa-gear text-sm"></i>
+      <span class="text-[9px]">설정</span>
+    </button>
+  </nav>
+
+  <!-- ==================== MODALS INJECTIONS ==================== -->
+
+  <!-- Account Modal (Add/Edit) -->
+  <div id="account-modal" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+    <div class="bg-surfaceDark border border-gray-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 id="account-modal-title" class="font-bold text-white text-base">계좌 추가</h3>
+        <button onclick="closeAccountModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="account-form" onsubmit="saveAccount(event)" class="space-y-4">
+        <input type="hidden" id="account-id">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1.5 font-medium">계좌명</label>
+          <input type="text" id="account-name" required class="w-full bg-bgDark border border-gray-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accentTeal" placeholder="예: 국민은행 적금, 토스 CMA">
+        </div>
+        <div class="flex gap-2 justify-end pt-2">
+          <button type="button" onclick="closeAccountModal()" class="bg-gray-800 text-gray-300 text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-gray-700">취소</button>
+          <button type="submit" class="bg-accentTeal text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700">저장</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Asset Modal (Add/Edit inside specific Account) -->
+  <div id="asset-modal" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+    <div class="bg-surfaceDark border border-gray-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 id="asset-modal-title" class="font-bold text-white text-base">자산 추가</h3>
+        <button onclick="closeAssetModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="asset-form" onsubmit="saveAsset(event)" class="space-y-4">
+        <input type="hidden" id="asset-id">
+        <input type="hidden" id="asset-account-id">
+        
+        <div>
+          <label class="block text-xs text-gray-400 mb-1.5 font-medium">자산(종목)명</label>
+          <input type="text" id="asset-name" required class="w-full bg-bgDark border border-gray-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accentTeal" placeholder="예: 삼성전자, 현금 잔액, 금현물 등">
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1.5 font-medium">자산군 종류</label>
+            <select id="asset-group" class="w-full bg-bgDark border border-gray-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accentTeal">
+              <option value="STOCK">주식 (Stock)</option>
+              <option value="BOND">채권 (Bond)</option>
+              <option value="GOLD">금 (Gold)</option>
+              <option value="CASH">현금 (Cash)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1.5 font-medium">가용성 등급</label>
+            <select id="asset-availability" class="w-full bg-bgDark border border-gray-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accentTeal">
+              <option value="INSTANT">즉시 가용 가능</option>
+              <option value="CONDITIONAL">조건부 가용</option>
+              <option value="LOCKED">잠김 (비유동)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs text-gray-400 mb-1.5 font-medium">보유 금액 (원화 기준)</label>
+          <div class="relative">
+            <input type="number" id="asset-amount" min="0" required class="w-full bg-bgDark border border-gray-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accentTeal pr-8" placeholder="0">
+            <span class="absolute right-3 top-2.5 text-xs text-gray-400">원</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-2 border-t border-gray-800 pt-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-xs text-white font-medium block">자산 리밸런싱 조정에 포함</span>
+              <span class="text-[10px] text-gray-400 block">리밸런싱 기능 계산 대상에 적용</span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="asset-is-rebalance" class="sr-only peer" checked>
+              <div class="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accentTeal"></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex gap-2 justify-end pt-2">
+          <button type="button" onclick="closeAssetModal()" class="bg-gray-800 text-gray-300 text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-gray-700">취소</button>
+          <button type="submit" class="bg-accentTeal text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700">저장</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Goal Modal (Add/Edit) -->
+  <div id="goal-modal" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+    <div class="bg-surfaceDark border border-gray-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 id="goal-modal-title" class="font-bold text-white text-base">목표 추가</h3>
+        <button onclick="closeGoalModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="goal-form" onsubmit="saveGoal(event)" class="space-y-4">
+        <input type="hidden" id="goal-id">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1.5 font-medium">목표명</label>
+          <input type="text" id="goal-name" required class="w-full bg-bgDark border border-gray-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accentTeal" placeholder="예: 결혼자금 마련, 내집마련 보증금">
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1.5 font-medium">목표 금액</label>
+            <div class="relative">
+              <input type="number" id="goal-amount" required min="1" class="w-full bg-bgDark border border-gray-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accentTeal pr-8" placeholder="0">
+              <span class="absolute right-3 top-2.5 text-xs text-gray-400">원</span>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1.5 font-medium">달성 기한 (목표시점)</label>
+            <input type="month" id="goal-target-date" required class="w-full bg-bgDark border border-gray-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accentTeal">
+          </div>
+        </div>
+
+        <div class="flex gap-2 justify-end pt-2">
+          <button type="button" onclick="closeGoalModal()" class="bg-gray-800 text-gray-300 text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-gray-700">취소</button>
+          <button type="submit" class="bg-accentTeal text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700">저장</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Snapshot Monthly Entry Modal (Bulk balances snapshot updater) -->
+  <div id="snapshot-modal" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+    <div class="bg-surfaceDark border border-gray-800 rounded-2xl w-full max-w-lg p-6 flex flex-col max-h-[90vh] shadow-2xl">
+      <div class="flex items-center justify-between mb-4 shrink-0">
+        <div>
+          <h3 class="font-bold text-white text-base">월별 자산 잔액 입력 (스냅샷 저장)</h3>
+          <p class="text-xs text-gray-400">선택한 달의 각 개별 자산 잔액을 갱신해 저장합니다.</p>
+        </div>
+        <button onclick="closeSnapshotEntryModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="mb-4 flex items-center gap-2 shrink-0">
+        <label class="text-xs text-gray-300">대상 연월 선택:</label>
+        <input type="month" id="snapshot-entry-month" onchange="loadSnapshotFormBalances()" class="bg-bgDark border border-gray-800 text-xs rounded-lg px-2.5 py-1.5 text-white">
+        <button type="button" onclick="prefillSnapshotFromCurrent()" class="text-[11px] bg-gray-800 hover:bg-gray-700 px-2.5 py-1.5 rounded-lg text-gray-300 transition">
+          <i class="fa-solid fa-magic"></i> 직전 데이터 채우기
+        </button>
+      </div>
+
+      <form id="snapshot-form" onsubmit="saveMonthlySnapshot(event)" class="flex-1 overflow-y-auto pr-1 space-y-4">
+        <div id="snapshot-entry-assets-list" class="space-y-4">
+          <!-- Dynamically populated per account assets inputs list -->
+        </div>
+
+        <div class="flex gap-2 justify-end pt-4 border-t border-gray-800 shrink-0">
+          <button type="button" onclick="closeSnapshotEntryModal()" class="bg-gray-800 text-gray-300 text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-gray-700">취소</button>
+          <button type="submit" class="bg-accentTeal text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700">이번 달 저장</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Rebalance Configuration Modal -->
+  <div id="rebalance-config-modal" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+    <div class="bg-surfaceDark border border-gray-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-white text-base">목표 자산배분 비중 설정</h3>
+        <button onclick="closeRebalanceConfigModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="rebalance-config-form" onsubmit="saveRebalanceConfig(event)" class="space-y-4">
+        <p class="text-xs text-gray-400 leading-relaxed">자산군 비중 합계는 <b>반드시 100%</b>여야 합니다.</p>
+        
+        <div class="space-y-3">
+          <div>
+            <label class="flex justify-between text-xs text-gray-400 mb-1">
+              <span>주식 (Stock) 비중</span>
+              <span id="rebalance-label-stock" class="font-bold text-white font-num">0%</span>
+            </label>
+            <input type="range" id="rebalance-range-stock" min="0" max="100" class="w-full accent-assetStock" oninput="updateRebalanceSliders('STOCK')">
+          </div>
+          <div>
+            <label class="flex justify-between text-xs text-gray-400 mb-1">
+              <span>채권 (Bond) 비중</span>
+              <span id="rebalance-label-bond" class="font-bold text-white font-num">0%</span>
+            </label>
+            <input type="range" id="rebalance-range-bond" min="0" max="100" class="w-full accent-assetBond" oninput="updateRebalanceSliders('BOND')">
+          </div>
+          <div>
+            <label class="flex justify-between text-xs text-gray-400 mb-1">
+              <span>금 (Gold) 비중</span>
+              <span id="rebalance-label-gold" class="font-bold text-white font-num">0%</span>
+            </label>
+            <input type="range" id="rebalance-range-gold" min="0" max="100" class="w-full accent-assetGold" oninput="updateRebalanceSliders('GOLD')">
+          </div>
+          <div>
+            <label class="flex justify-between text-xs text-gray-400 mb-1">
+              <span>현금 (Cash) 비중</span>
+              <span id="rebalance-label-cash" class="font-bold text-white font-num">0%</span>
+            </label>
+            <input type="range" id="rebalance-range-cash" min="0" max="100" class="w-full accent-assetCash" oninput="updateRebalanceSliders('CASH')">
+          </div>
+        </div>
+
+        <div class="bg-bgDark p-3 rounded-xl flex items-center justify-between text-xs border border-gray-800">
+          <span class="text-gray-400 font-medium">설정 비중 합계:</span>
+          <span id="rebalance-config-sum" class="font-bold text-white font-num">0%</span>
+        </div>
+
+        <div class="flex gap-2 justify-end pt-2">
+          <button type="button" onclick="closeRebalanceConfigModal()" class="bg-gray-800 text-gray-300 text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-gray-700">취소</button>
+          <button type="submit" class="bg-accentTeal text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700">저장</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ==================== CONTROLLER & APPLICATION LOGIC ==================== -->
+  <script>
+    // System Datetime Preset
+    const CURRENT_DATETIME = "2026-07-03"; 
+    
+    // Core Application State
+    let appState = {
+      accounts: [],
+      goals: [],
+      snapshots: {}, // Key: YYYY-MM, Value: { assetBalances: { assetId: Number }, totalAssets: Number }
+      rebalanceTargets: {
+        STOCK: 40,
+        BOND: 40,
+        GOLD: 10,
+        CASH: 10
+      },
+      currentTrendPeriod: 6, // Month interval trend span
+      activeView: 'dashboard',
+      selectedSnapshotMonth: ''
+    };
+
+    // Demo Baseline Seeding Data (Pre-fill on first start to provide immersive showcase)
+    const DEMO_ACCOUNTS = [
+      {
+        id: "acc_1",
+        name: "토스뱅크 CMA 계좌",
+        assets: [
+          { id: "ast_1", name: "CMA 예수금", group: "CASH", availability: "INSTANT", amount: 5000000, isRebalance: true },
+          { id: "ast_2", name: "국내 채권형 ETF", group: "BOND", availability: "INSTANT", amount: 4500000, isRebalance: true }
+        ]
+      },
+      {
+        id: "acc_2",
+        name: "KB 미래에셋 연금저축",
+        assets: [
+          { id: "ast_3", name: "미국 S&P500 ETF", group: "STOCK", availability: "CONDITIONAL", amount: 15000000, isRebalance: true },
+          { id: "ast_4", name: "골드바 실물연동", group: "GOLD", availability: "CONDITIONAL", amount: 3000000, isRebalance: false }
+        ]
+      },
+      {
+        id: "acc_3",
+        name: "청년주택청약저축",
+        assets: [
+          { id: "ast_5", name: "주택 청약 원금", group: "CASH", availability: "LOCKED", amount: 6200000, isRebalance: false }
+        ]
+      }
+    ];
+
+    const DEMO_GOALS = [
+      { id: "gol_1", name: "2년 뒤 결혼자금 마련", amount: 40000000, targetDate: "2028-06" },
+      { id: "gol_2", name: "도쿄 힐링 여행 자금", amount: 3000000, targetDate: "2027-01" },
+      { id: "gol_3", name: "내집마련 보증금 기초", amount: 200000000, targetDate: "2031-12" }
+    ];
+
+    const DEMO_SNAPSHOTS = {
+      "2026-03": {
+        totalAssets: 28200000,
+        assetBalances: { "ast_1": 4200000, "ast_2": 3800000, "ast_3": 12000000, "ast_4": 2500000, "ast_5": 5700000 }
+      },
+      "2026-04": {
+        totalAssets: 29500000,
+        assetBalances: { "ast_1": 4500000, "ast_2": 4000000, "ast_3": 13000000, "ast_4": 2200000, "ast_5": 5800000 }
+      },
+      "2026-05": {
+        totalAssets: 31200000,
+        assetBalances: { "ast_1": 5100000, "ast_2": 4200000, "ast_3": 14000000, "ast_4": 2000000, "ast_5": 5900000 }
+      },
+      "2026-06": {
+        totalAssets: 33700000,
+        assetBalances: { "ast_1": 5000000, "ast_2": 4500000, "ast_3": 15000000, "ast_4": 3000000, "ast_5": 6200000 }
+      }
+    };
+
+    // Save and Load Helpers to localStorage
+    function saveState() {
+      localStorage.setItem('moaboard_state', JSON.stringify(appState));
+    }
+
+    function loadState() {
+      const saved = localStorage.getItem('moaboard_state');
+      if (saved) {
+        try {
+          appState = JSON.parse(saved);
+        } catch (e) {
+          console.error("데이터 로드 오류, 데모 데이터로 대체합니다.", e);
+          loadDemoData();
+        }
+      } else {
+        loadDemoData();
+      }
+    }
+
+    function loadDemoData() {
+      appState.accounts = JSON.parse(JSON.stringify(DEMO_ACCOUNTS));
+      appState.goals = JSON.parse(JSON.stringify(DEMO_GOALS));
+      appState.snapshots = JSON.parse(JSON.stringify(DEMO_SNAPSHOTS));
+      appState.rebalanceTargets = { STOCK: 40, BOND: 40, GOLD: 10, CASH: 10 };
+      appState.selectedSnapshotMonth = "2026-06";
+      saveState();
+    }
+
+    // Initialize on page load
+    window.onload = function() {
+      loadState();
+      
+      // Determine selected snapshot month if not set
+      const sortedMonths = getSortedSnapshotMonths();
+      if (!appState.selectedSnapshotMonth || !appState.snapshots[appState.selectedSnapshotMonth]) {
+        appState.selectedSnapshotMonth = sortedMonths.length > 0 ? sortedMonths[sortedMonths.length - 1] : "2026-06";
+      }
+
+      // Check current date to display F6 annual rebalancing banner
+      checkRebalanceBannerDisplay();
+
+      // Refresh overall application rendering
+      updateUIRenderings();
+    };
+
+    function checkRebalanceBannerDisplay() {
+      const currentMonth = CURRENT_DATETIME.substring(5, 7); // "07"
+      const banner = document.getElementById('rebalance-banner');
+      if (currentMonth === '07') {
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    // Toast Alert Helper
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto ${
+        type === 'success' 
+          ? 'bg-emerald-950 border-emerald-500/30 text-emerald-300' 
+          : 'bg-red-950 border-red-500/30 text-red-300'
+      }`;
+      
+      toast.innerHTML = `
+        <i class="fa-solid ${type === 'success' ? 'fa-check-circle' : 'fa-triangle-exclamation'}"></i>
+        <span>${message}</span>
+      `;
+      
+      container.appendChild(toast);
+      
+      // Animate in
+      setTimeout(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      }, 50);
+
+      // Dismiss after 3s
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-1');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // View Switching Controller
+    function switchView(viewId) {
+      appState.activeView = viewId;
+      document.querySelectorAll('.app-view').forEach(view => view.classList.add('hidden'));
+      
+      // Handle special target detail dynamically redirected
+      if (viewId === 'goals' || viewId === 'trends' || viewId === 'dashboard' || viewId === 'assets' || viewId === 'rebalance' || viewId === 'settings') {
+        document.getElementById(`view-${viewId}`).classList.remove('hidden');
+      } else {
+        document.getElementById(viewId).classList.remove('hidden');
+      }
+
+      // Active state on desktop sidebar
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        if (btn.getAttribute('data-nav') === viewId) {
+          btn.classList.add('bg-accentTeal', 'text-white');
+          btn.classList.remove('text-gray-400');
+        } else {
+          btn.classList.remove('bg-accentTeal', 'text-white');
+          btn.classList.add('text-gray-400');
+        }
+      });
+
+      // Active state on mobile tabbar
+      document.querySelectorAll('.nav-btn-mobile').forEach(btn => {
+        if (btn.getAttribute('data-nav-mobile') === viewId) {
+          btn.classList.add('text-accentTeal');
+          btn.classList.remove('text-gray-400');
+        } else {
+          btn.classList.remove('text-accentTeal');
+          btn.classList.add('text-gray-400');
+        }
+      });
+
+      updateUIRenderings();
+    }
+
+    // Core Global Render triggers
+    function updateUIRenderings() {
+      // Re-populate monthly selector dropdown
+      populateSnapshotSelector();
+
+      // Render Dashboard elements
+      renderDashboard();
+
+      // Render Trends Graph & Logs
+      renderTrends();
+
+      // Render Goals management
+      renderGoals();
+
+      // Render Assets management
+      renderAssets();
+
+      // Render Rebalance guide
+      renderRebalance();
+    }
+
+    // Utility: Format Numbers to Won Currency standard
+    function formatWon(val) {
+      return val.toLocaleString('ko-KR') + '원';
+    }
+
+    function formatWonShort(val) {
+      if (val >= 100000000) {
+        const eok = Math.floor(val / 100000000);
+        const rest = Math.floor((val % 100000000) / 10000);
+        return rest > 0 ? `${eok}억 ${rest.toLocaleString('ko-KR')}만원` : `${eok}억원`;
+      }
+      if (val >= 10000) {
+        return Math.floor(val / 10000).toLocaleString('ko-KR') + '만원';
+      }
+      return val.toLocaleString('ko-KR') + '원';
+    }
+
+    function getSortedSnapshotMonths() {
+      return Object.keys(appState.snapshots).sort();
+    }
+
+    function populateSnapshotSelector() {
+      const select = document.getElementById('snapshot-month');
+      if (!select) return;
+
+      select.innerHTML = '';
+      const months = getSortedSnapshotMonths();
+
+      // Fallback placeholder if empty
+      if (months.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = "2026-06";
+        opt.textContent = "2026-06";
+        select.appendChild(opt);
+        return;
+      }
+
+      months.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        if (m === appState.selectedSnapshotMonth) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      });
+    }
+
+    function loadSnapshotData() {
+      const select = document.getElementById('snapshot-month');
+      appState.selectedSnapshotMonth = select.value;
+      saveState();
+      updateUIRenderings();
+    }
+
+
+    // ==================== CALCULATION & ALGORITHMS (F7 Waterfall & Goals Reverse Calculation) ====================
+    
+    // Calculates the core aggregate status details under the designated snapshot month
+    function getSnapshotSummary(month) {
+      const snapshot = appState.snapshots[month];
+      if (!snapshot) {
+        return {
+          total: 0,
+          STOCK: 0, BOND: 0, GOLD: 0, CASH: 0,
+          byAsset: {},
+          availability: { INSTANT: 0, CONDITIONAL: 0, LOCKED: 0 }
+        };
+      }
+
+      let total = 0;
+      let stock = 0;
+      let bond = 0;
+      let gold = 0;
+      let cash = 0;
+      let availInst = 0;
+      let availCond = 0;
+      let availLock = 0;
+
+      const byAsset = {};
+
+      // Match snapshot asset balance records back with active asset availability metrics
+      appState.accounts.forEach(acc => {
+        acc.assets.forEach(ast => {
+          const balance = snapshot.assetBalances[ast.id] !== undefined ? snapshot.assetBalances[ast.id] : ast.amount;
+          byAsset[ast.id] = balance;
+          total += balance;
+
+          // Align with asset groups
+          if (ast.group === 'STOCK') stock += balance;
+          else if (ast.group === 'BOND') bond += balance;
+          else if (ast.group === 'GOLD') gold += balance;
+          else if (ast.group === 'CASH') cash += balance;
+
+          // Align with availability classification
+          if (ast.availability === 'INSTANT') availInst += balance;
+          else if (ast.availability === 'CONDITIONAL') availCond += balance;
+          else if (ast.availability === 'LOCKED') availLock += balance;
+        });
+      });
+
+      return {
+        total: total,
+        STOCK: stock,
+        BOND: bond,
+        GOLD: gold,
+        CASH: cash,
+        byAsset: byAsset,
+        availability: { INSTANT: availInst, CONDITIONAL: availCond, LOCKED: availLock }
+      };
+    }
+
+    // F7 Waterfall Allocation Core Logic implementation
+    function calculateWaterfallAllocations(month) {
+      const summary = getSnapshotSummary(month);
+      const goals = [...appState.goals]; // Goals sorted index is order-sensitive priority
+      
+      // Filter out non-locked assets as source targets eligible to fund goals
+      // UX Specification rule: Locked properties (LOCKED) shouldn't be pooled in goals unless exclusive
+      let poolFunds = 0;
+      const assetPool = {}; // assetId -> availableFund
+      
+      appState.accounts.forEach(acc => {
+        acc.assets.forEach(ast => {
+          // Exclude locked retirement funds/real estates from waterfall goals allocation
+          if (ast.availability !== 'LOCKED') {
+            const balance = summary.byAsset[ast.id] || 0;
+            assetPool[ast.id] = balance;
+            poolFunds += balance;
+          }
+        });
+      });
+
+      // Goal-wise allocation outcome logs
+      const goalAllocations = {}; // goalId -> { allocatedSum, details: [ { assetName, amount } ] }
+      goals.forEach(g => {
+        goalAllocations[g.id] = { allocatedSum: 0, details: [] };
+      });
+
+      // Waterfall prioritization loops
+      goals.forEach(g => {
+        let shortage = g.amount; // total amount to cover
+        
+        // Loop and exhaust available asset items down the prioritized waterfall
+        for (const [astId, availAmt] of Object.entries(assetPool)) {
+          if (availAmt <= 0) continue;
+          if (shortage <= 0) break;
+
+          const matchAsset = findAssetById(astId);
+          if (!matchAsset) continue;
+
+          // Deduct from pool and commit to goal
+          const matchAmt = Math.min(availAmt, shortage);
+          assetPool[astId] -= matchAmt;
+          shortage -= matchAmt;
+
+          goalAllocations[g.id].allocatedSum += matchAmt;
+          goalAllocations[g.id].details.push({
+            assetId: astId,
+            assetName: matchAsset.name,
+            amount: matchAmt
+          });
+        }
+      });
+
+      return {
+        goalAllocations: goalAllocations,
+        remainingPool: assetPool
+      };
+    }
+
+    function findAssetById(id) {
+      for (const acc of appState.accounts) {
+        for (const ast of acc.assets) {
+          if (ast.id === id) return ast;
+        }
+      }
+      return null;
+    }
+
+
+    // ==================== VIEW RENDERERS ====================
+
+    // --- F1/F2: DASHBOARD HOME RENDERING ---
+    function renderDashboard() {
+      const month = appState.selectedSnapshotMonth;
+      const summary = getSnapshotSummary(month);
+
+      // Calculate monthly increments comparing with prior month snap
+      const sortedMonths = getSortedSnapshotMonths();
+      const currentIdx = sortedMonths.indexOf(month);
+      
+      let changeText = '첫 기록 월';
+      let changeClass = 'text-gray-400';
+
+      if (currentIdx > 0) {
+        const prevMonth = sortedMonths[currentIdx - 1];
+        const prevSummary = getSnapshotSummary(prevMonth);
+        const diff = summary.total - prevSummary.total;
+        const diffPct = prevSummary.total > 0 ? (diff / prevSummary.total * 100).toFixed(1) : '0.0';
+
+        if (diff > 0) {
+          changeText = `전월 대비 +${formatWonShort(diff)} (+${diffPct}%)`;
+          changeClass = 'text-increaseGreen';
+        } else if (diff < 0) {
+          changeText = `전월 대비 -${formatWonShort(Math.abs(diff))} (${diffPct}%)`;
+          changeClass = 'text-decreaseRed';
+        } else {
+          changeText = `전월 대비 변동 없음 (0.0%)`;
+          changeClass = 'text-gray-400';
+        }
+      }
+
+      // Update Hero Elements
+      document.getElementById('hero-total-assets').textContent = formatWon(summary.total);
+      
+      const changeChip = document.getElementById('hero-assets-change');
+      changeChip.textContent = changeText;
+      changeChip.className = `text-xs font-num mt-1 flex items-center gap-1 ${changeClass}`;
+
+      // Calculate Goals stats to update dashboard targets
+      const waterfall = calculateWaterfallAllocations(month);
+      const firstGoal = appState.goals[0];
+
+      if (firstGoal) {
+        const goalAlloc = waterfall.goalAllocations[firstGoal.id]?.allocatedSum || 0;
+        const pct = Math.min(100, Math.floor((goalAlloc / firstGoal.amount) * 100));
+        document.getElementById('hero-goal-progress').textContent = `${pct}%`;
+        document.getElementById('hero-goal-bar').style.width = `${pct}%`;
+      } else {
+        document.getElementById('hero-goal-progress').textContent = '등록 없음';
+        document.getElementById('hero-goal-bar').style.width = '0%';
+      }
+
+      // Reverse calculations for total cumulative monthly needed savings
+      let totalMonthlyNeeded = 0;
+      appState.goals.forEach(g => {
+        const goalAlloc = waterfall.goalAllocations[g.id]?.allocatedSum || 0;
+        const shortage = Math.max(0, g.amount - goalAlloc);
+        const monthsLeft = getMonthsDifference(CURRENT_DATETIME, g.targetDate);
+        if (shortage > 0 && monthsLeft > 0) {
+          totalMonthlyNeeded += shortage / monthsLeft;
+        }
+      });
+      document.getElementById('hero-monthly-needed').textContent = formatWonShort(Math.round(totalMonthlyNeeded));
+
+      // Donut Chart updates
+      const stockPct = summary.total > 0 ? Math.round((summary.STOCK / summary.total) * 100) : 0;
+      const bondPct = summary.total > 0 ? Math.round((summary.BOND / summary.total) * 100) : 0;
+      const goldPct = summary.total > 0 ? Math.round((summary.GOLD / summary.total) * 100) : 0;
+      const cashPct = summary.total > 0 ? Math.round((summary.CASH / summary.total) * 100) : 0;
+
+      // Adjust stroke segments to construct SVG segments dynamically
+      const segStock = document.getElementById('donut-segment-stock');
+      const segBond = document.getElementById('donut-segment-bond');
+      const segGold = document.getElementById('donut-segment-gold');
+      const segCash = document.getElementById('donut-segment-cash');
+
+      segStock.setAttribute('stroke-dasharray', `${stockPct} 100`);
+      segStock.setAttribute('stroke-dashoffset', '0');
+
+      segBond.setAttribute('stroke-dasharray', `${bondPct} 100`);
+      segBond.setAttribute('stroke-dashoffset', `-${stockPct}`);
+
+      segGold.setAttribute('stroke-dasharray', `${goldPct} 100`);
+      segGold.setAttribute('stroke-dashoffset', `-${stockPct + bondPct}`);
+
+      segCash.setAttribute('stroke-dasharray', `${cashPct} 100`);
+      segCash.setAttribute('stroke-dashoffset', `-${stockPct + bondPct + goldPct}`);
+
+      document.getElementById('donut-center-stock-pct').textContent = `${stockPct}%`;
+
+      document.getElementById('legend-stock-val').textContent = `${formatWonShort(summary.STOCK)} (${stockPct}%)`;
+      document.getElementById('legend-bond-val').textContent = `${formatWonShort(summary.BOND)} (${bondPct}%)`;
+      document.getElementById('legend-gold-val').textContent = `${formatWonShort(summary.GOLD)} (${goldPct}%)`;
+      document.getElementById('legend-cash-val').textContent = `${formatWonShort(summary.CASH)} (${cashPct}%)`;
+
+      // Account-wise composition list
+      const accContainer = document.getElementById('dashboard-account-bars');
+      accContainer.innerHTML = '';
+      
+      if (appState.accounts.length === 0) {
+        accContainer.innerHTML = `<p class="text-xs text-gray-500 text-center py-4">계좌가 존재하지 않습니다.</p>`;
+      } else {
+        appState.accounts.forEach(acc => {
+          let accSum = 0;
+          acc.assets.forEach(ast => {
+            accSum += summary.byAsset[ast.id] !== undefined ? summary.byAsset[ast.id] : ast.amount;
+          });
+
+          const pct = summary.total > 0 ? ((accSum / summary.total) * 100).toFixed(1) : '0.0';
+
+          const item = document.createElement('div');
+          item.className = 'space-y-1.5';
+          item.innerHTML = `
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-medium text-gray-300">${acc.name}</span>
+              <span class="font-bold text-gray-400 font-num">${formatWonShort(accSum)} (${pct}%)</span>
+            </div>
+            <div class="w-full bg-gray-800 rounded-full h-2">
+              <div class="bg-accentTeal h-2 rounded-full" style="width: ${pct}%"></div>
+            </div>
+          `;
+          accContainer.appendChild(item);
+        });
+      }
+
+      // Goals summary list
+      const goalsGrid = document.getElementById('dashboard-goals-grid');
+      goalsGrid.innerHTML = '';
+
+      if (appState.goals.length === 0) {
+        goalsGrid.innerHTML = `
+          <div class="col-span-full bg-bgDark/40 p-6 rounded-xl border border-gray-800 text-center text-xs text-gray-500">
+            등록된 재무 목표가 없습니다. 첫 목표를 수립하고 월별 필요한 모금 한도를 분석하세요.
+          </div>
+        `;
+      } else {
+        appState.goals.forEach((g, idx) => {
+          const goalAlloc = waterfall.goalAllocations[g.id]?.allocatedSum || 0;
+          const pct = Math.min(100, Math.floor((goalAlloc / g.amount) * 100));
+          const shortage = Math.max(0, g.amount - goalAlloc);
+          const mLeft = getMonthsDifference(CURRENT_DATETIME, g.targetDate);
+          const monthlyNeeded = (shortage > 0 && mLeft > 0) ? Math.round(shortage / mLeft) : 0;
+
+          const card = document.createElement('div');
+          card.onclick = () => showGoalDetail(g.id);
+          card.className = 'bg-bgDark p-4 rounded-xl border border-gray-800 hover:border-accentTeal cursor-pointer transition space-y-3';
+          card.innerHTML = `
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-[10px] text-accentTeal font-bold uppercase">순위 ${idx+1}</span>
+                <h4 class="font-bold text-white text-xs mt-0.5">${g.name}</h4>
+              </div>
+              <span class="text-[10px] bg-surfaceDark px-2 py-0.5 rounded text-gray-400 font-num">D-${getDaysLeftString(g.targetDate)}</span>
+            </div>
+
+            <div class="space-y-1">
+              <div class="flex justify-between text-[10px] text-gray-400 font-num">
+                <span>모금액: ${formatWonShort(goalAlloc)}</span>
+                <span>목표: ${formatWonShort(g.amount)}</span>
+              </div>
+              <div class="w-full bg-gray-800 rounded-full h-1.5">
+                <div class="bg-accentTeal h-1.5 rounded-full" style="width: ${pct}%"></div>
+              </div>
+            </div>
+
+            <div class="border-t border-gray-800/80 pt-2 flex justify-between items-center text-[10px]">
+              <span class="text-gray-500">매달 저축 필요액</span>
+              <span class="font-bold text-amber-400 font-num">${monthlyNeeded > 0 ? formatWonShort(monthlyNeeded) : '완료'}</span>
+            </div>
+          `;
+          goalsGrid.appendChild(card);
+        });
+      }
+    }
+
+
+    // --- F2: ASSETS TRENDS VIEW RENDERING ---
+    function renderTrends() {
+      const container = document.getElementById('trends-chart-container');
+      const tableBody = document.getElementById('trends-history-table');
+      if (!container || !tableBody) return;
+
+      const sortedMonths = getSortedSnapshotMonths();
+      let displayMonths = [...sortedMonths];
+
+      // Limit period based on active selection (6, 12, 0=all)
+      if (appState.currentTrendPeriod > 0) {
+        displayMonths = displayMonths.slice(-appState.currentTrendPeriod);
+      }
+
+      // UI state guard if insufficient data points available
+      if (displayMonths.length < 2) {
+        container.innerHTML = `
+          <div class="text-center p-6 space-y-2">
+            <p class="text-xs text-gray-400">데이터가 한 달 더 쌓이면 추이가 나타납니다.</p>
+            <button onclick="openSnapshotEntryModal()" class="bg-accentTeal hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition">
+              월 잔액 입력하기
+            </button>
+          </div>
+        `;
+        document.getElementById('trends-stat-current').textContent = '₩0';
+        document.getElementById('trends-stat-change').textContent = '-';
+        document.getElementById('trends-stat-average').textContent = '-';
+        tableBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-xs text-gray-500">히스토리가 충분하지 않습니다.</td></tr>`;
+        return;
+      }
+
+      // Calculate statistical summaries
+      const latestMonth = displayMonths[displayMonths.length - 1];
+      const oldestMonth = displayMonths[0];
+      const latestSummary = getSnapshotSummary(latestMonth);
+      const oldestSummary = getSnapshotSummary(oldestMonth);
+
+      const cumulativeDiff = latestSummary.total - oldestSummary.total;
+      const averageGrowth = cumulativeDiff / (displayMonths.length - 1);
+
+      document.getElementById('trends-stat-current').textContent = formatWon(latestSummary.total);
+      
+      const changeEl = document.getElementById('trends-stat-change');
+      if (cumulativeDiff > 0) {
+        changeEl.textContent = `+${formatWonShort(cumulativeDiff)}`;
+        changeEl.className = 'text-xl font-bold text-increaseGreen font-num';
+      } else {
+        changeEl.textContent = `${formatWonShort(cumulativeDiff)}`;
+        changeEl.className = 'text-xl font-bold text-decreaseRed font-num';
+      }
+
+      document.getElementById('trends-stat-average').textContent = formatWon(Math.round(averageGrowth));
+
+      // Construct SVG Line Graph dynamically
+      const width = container.clientWidth || 500;
+      const height = 240;
+      const paddingLeft = 60;
+      const paddingRight = 30;
+      const paddingTop = 20;
+      const paddingBottom = 40;
+
+      const chartW = width - paddingLeft - paddingRight;
+      const chartH = height - paddingTop - paddingBottom;
+
+      // Extract asset sums for plotted points
+      const points = displayMonths.map(m => {
+        return { month: m, total: getSnapshotSummary(m).total };
+      });
+
+      const maxTotal = Math.max(...points.map(p => p.total)) * 1.1; // 10% headroom
+      const minTotal = Math.min(...points.map(p => p.total)) * 0.9;
+
+      const xSpan = points.length - 1;
+      const ySpan = maxTotal - minTotal || 1;
+
+      // Render line path coord points
+      let svgContent = `<svg width="${width}" height="${height}" class="overflow-visible">`;
+      
+      // Grid helper lines
+      for (let i = 0; i <= 4; i++) {
+        const val = minTotal + (ySpan * i / 4);
+        const y = height - paddingBottom - (chartH * i / 4);
+        svgContent += `
+          <line x1="${paddingLeft}" y1="${y}" x2="${width - paddingRight}" y2="${y}" stroke="#1F2937" stroke-dasharray="2, 4" stroke-width="1"></line>
+          <text x="${paddingLeft - 10}" y="${y + 4}" fill="#6B7280" font-size="10" text-anchor="end">${formatWonShort(Math.round(val))}</text>
+        `;
+      }
+
+      // Plot coordinates
+      const coords = points.map((p, idx) => {
+        const x = paddingLeft + (chartW * idx / xSpan);
+        const y = height - paddingBottom - (chartH * (p.total - minTotal) / ySpan);
+        return { x, y, month: p.month, total: p.total };
+      });
+
+      // Construct Line path string
+      let pathD = `M ${coords[0].x} ${coords[0].y}`;
+      let areaD = `M ${coords[0].x} ${height - paddingBottom} L ${coords[0].x} ${coords[0].y}`;
+      
+      for (let i = 1; i < coords.length; i++) {
+        pathD += ` L ${coords[i].x} ${coords[i].y}`;
+        areaD += ` L ${coords[i].x} ${coords[i].y}`;
+      }
+      
+      areaD += ` L ${coords[coords.length - 1].x} ${height - paddingBottom} Z`;
+
+      // Draw shadow gradient fill
+      svgContent += `
+        <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1D9E75" stop-opacity="0.25"></stop>
+          <stop offset="100%" stop-color="#1D9E75" stop-opacity="0"></stop>
+        </linearGradient>
+        <path d="${areaD}" fill="url(#chartGradient)"></path>
+        <path d="${pathD}" fill="none" stroke="#1D9E75" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+      `;
+
+      // Draw point markers and month names
+      coords.forEach((coord, idx) => {
+        svgContent += `
+          <circle cx="${coord.x}" cy="${coord.y}" r="4" fill="#1D9E75" stroke="#0D0E11" stroke-width="1.5" class="hover:r-6 cursor-pointer transition"></circle>
+          <text x="${coord.x}" y="${height - paddingBottom + 18}" fill="#6B7280" font-size="10" text-anchor="middle">${coord.month.substring(5)}월</text>
+        `;
+      });
+
+      svgContent += `</svg>`;
+      container.innerHTML = svgContent;
+
+      // Render historical log table rows
+      tableBody.innerHTML = '';
+      for (let i = displayMonths.length - 1; i >= 0; i--) {
+        const m = displayMonths[i];
+        const summ = getSnapshotSummary(m);
+        
+        let changeTd = '-';
+        let changePctTd = '-';
+        let rowChangeClass = 'text-gray-400';
+
+        if (i > 0) {
+          const prevM = displayMonths[i - 1];
+          const prevSumm = getSnapshotSummary(prevM);
+          const diff = summ.total - prevSumm.total;
+          const pct = prevSumm.total > 0 ? (diff / prevSumm.total * 100).toFixed(1) : '0.0';
+
+          if (diff > 0) {
+            changeTd = `+${formatWon(diff)}`;
+            changePctTd = `+${pct}%`;
+            rowChangeClass = 'text-increaseGreen';
+          } else if (diff < 0) {
+            changeTd = `-${formatWon(Math.abs(diff))}`;
+            changePctTd = `${pct}%`;
+            rowChangeClass = 'text-decreaseRed';
+          } else {
+            changeTd = '변동 없음';
+            changePctTd = '0.0%';
+          }
+        }
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-800/20 text-gray-300';
+        tr.innerHTML = `
+          <td class="p-4 font-medium">${m} 스냅샷</td>
+          <td class="p-4 text-right text-white font-bold">${formatWon(summ.total)}</td>
+          <td class="p-4 text-right ${rowChangeClass}">${changeTd}</td>
+          <td class="p-4 text-right ${rowChangeClass}">${changePctTd}</td>
+        `;
+        tableBody.appendChild(tr);
+      }
+    }
+
+    function setTrendPeriod(m) {
+      appState.currentTrendPeriod = m;
+      document.querySelectorAll('.p-filter-btn').forEach(btn => {
+        btn.classList.remove('bg-accentTeal', 'text-white');
+        btn.classList.add('text-gray-400');
+      });
+      const act = document.getElementById(`trend-p-${m === 0 ? 'all' : m}`);
+      if (act) {
+        act.classList.add('bg-accentTeal', 'text-white');
+        act.classList.remove('text-gray-400');
+      }
+      renderTrends();
+    }
+
+
+    // --- F3/F7: GOALS MANAGEMENT RENDERING ---
+    function renderGoals() {
+      const list = document.getElementById('goals-list');
+      if (!list) return;
+
+      list.innerHTML = '';
+      const waterfall = calculateWaterfallAllocations(appState.selectedSnapshotMonth);
+
+      if (appState.goals.length === 0) {
+        list.innerHTML = `
+          <div class="bg-surfaceDark p-8 rounded-2xl border border-gray-800 text-center text-xs text-gray-500 space-y-3">
+            <p>설정된 미래 저축 목표가 없습니다. 결혼 자금, 전세금 상환 등 크고 작은 목표를 만들어 보세요.</p>
+            <button onclick="openGoalModal()" class="bg-accentTeal hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition">
+              첫 재무 목표 만들기
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      appState.goals.forEach((g, idx) => {
+        const goalAlloc = waterfall.goalAllocations[g.id]?.allocatedSum || 0;
+        const pct = Math.min(100, Math.floor((goalAlloc / g.amount) * 100));
+        const shortage = Math.max(0, g.amount - goalAlloc);
+        const mLeft = getMonthsDifference(CURRENT_DATETIME, g.targetDate);
+        const monthlyNeeded = (shortage > 0 && mLeft > 0) ? Math.round(shortage / mLeft) : 0;
+
+        const card = document.createElement('div');
+        card.className = 'bg-surfaceDark p-5 rounded-2xl border border-gray-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 transition hover:border-gray-700';
+        card.innerHTML = `
+          <!-- Order Handle & Details -->
+          <div class="flex items-center gap-4 w-full md:w-auto">
+            <div class="flex flex-col gap-1 shrink-0 text-gray-500 hover:text-white transition">
+              <button onclick="moveGoalOrder(${idx}, 'UP')" class="p-1 hover:bg-gray-800 rounded ${idx === 0 ? 'opacity-20 cursor-not-allowed' : ''}" ${idx === 0 ? 'disabled' : ''}>
+                <i class="fa-solid fa-chevron-up"></i>
+              </button>
+              <button onclick="moveGoalOrder(${idx}, 'DOWN')" class="p-1 hover:bg-gray-800 rounded ${idx === appState.goals.length - 1 ? 'opacity-20 cursor-not-allowed' : ''}" ${idx === appState.goals.length - 1 ? 'disabled' : ''}>
+                <i class="fa-solid fa-chevron-down"></i>
+              </button>
+            </div>
+            
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] bg-accentTeal/10 text-accentTeal font-bold px-2 py-0.5 rounded">우선순위 ${idx + 1}</span>
+                <span class="text-xs text-gray-400 font-num">D-${getDaysLeftString(g.targetDate)}</span>
+              </div>
+              <h3 onclick="showGoalDetail('${g.id}')" class="font-bold text-white text-sm hover:underline cursor-pointer">${g.name}</h3>
+              <p class="text-xs text-gray-400">목표 시점: ${g.targetDate} (${mLeft > 0 ? `${mLeft}개월 남음` : '기한 초과'})</p>
+            </div>
+          </div>
+
+          <!-- Mid progress bar -->
+          <div class="w-full md:max-w-xs space-y-1.5 flex-1">
+            <div class="flex justify-between text-xs font-num">
+              <span class="text-gray-400">배정 금액: ${formatWonShort(goalAlloc)}</span>
+              <span class="text-gray-300 font-bold">${pct}%</span>
+            </div>
+            <div class="w-full bg-bgDark rounded-full h-2">
+              <div class="bg-accentTeal h-2 rounded-full transition-all" style="width: ${pct}%"></div>
+            </div>
+            <div class="flex justify-between text-[10px] text-gray-500">
+              <span>목표액: ${formatWonShort(g.amount)}</span>
+              <span>부족액: ${formatWonShort(shortage)}</span>
+            </div>
+          </div>
+
+          <!-- Reverse savings calculation result & Controls -->
+          <div class="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto border-t md:border-t-0 border-gray-800 pt-3 md:pt-0">
+            <div class="text-left md:text-right">
+              <span class="text-[10px] text-gray-500 block">매달 저축 역산액</span>
+              <span class="font-bold text-base text-amber-400 font-num">${monthlyNeeded > 0 ? formatWonShort(monthlyNeeded) : '목표 달성'}</span>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <button onclick="openGoalModal('${g.id}')" class="p-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs transition">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button onclick="deleteGoal('${g.id}')" class="p-2 bg-red-950/40 hover:bg-red-900/50 text-red-400 rounded-lg text-xs transition">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    // Move Goal Order for priority adjustment (Waterfall hierarchy recalculation)
+    function moveGoalOrder(idx, dir) {
+      if (dir === 'UP' && idx > 0) {
+        const temp = appState.goals[idx];
+        appState.goals[idx] = appState.goals[idx - 1];
+        appState.goals[idx - 1] = temp;
+      } else if (dir === 'DOWN' && idx < appState.goals.length - 1) {
+        const temp = appState.goals[idx];
+        appState.goals[idx] = appState.goals[idx + 1];
+        appState.goals[idx + 1] = temp;
+      }
+      saveState();
+      updateUIRenderings();
+      showToast("목표 순위와 자산 우선순위 배분이 실시간 업데이트되었습니다.");
+    }
+
+
+    // --- F3/F7: DETAILED GOAL EXCLUSIVES PANEL VIEW ---
+    function showGoalDetail(goalId) {
+      const g = appState.goals.find(x => x.id === goalId);
+      if (!g) return;
+
+      const idx = appState.goals.indexOf(g);
+      switchView('view-goal-detail');
+
+      const month = appState.selectedSnapshotMonth;
+      const waterfall = calculateWaterfallAllocations(month);
+      const goalAlloc = waterfall.goalAllocations[g.id]?.allocatedSum || 0;
+      const pct = Math.min(100, Math.floor((goalAlloc / g.amount) * 100));
+      const shortage = Math.max(0, g.amount - goalAlloc);
+      const mLeft = getMonthsDifference(CURRENT_DATETIME, g.targetDate);
+      const monthlyNeeded = (shortage > 0 && mLeft > 0) ? Math.round(shortage / mLeft) : 0;
+
+      const details = waterfall.goalAllocations[g.id]?.details || [];
+
+      const targetEl = document.getElementById('goal-detail-content');
+      
+      // Determine Milestone Status
+      const ms25 = pct >= 25 ? 'bg-accentTeal text-white' : 'bg-bgDark text-gray-500 border border-gray-800';
+      const ms50 = pct >= 50 ? 'bg-accentTeal text-white' : 'bg-bgDark text-gray-500 border border-gray-800';
+      const ms75 = pct >= 75 ? 'bg-accentTeal text-white' : 'bg-bgDark text-gray-500 border border-gray-800';
+      const ms100 = pct >= 100 ? 'bg-accentTeal text-white' : 'bg-bgDark text-gray-500 border border-gray-800';
+
+      // Build Allocated assets HTML log list
+      let assetsAllocatedHTML = '';
+      if (details.length === 0) {
+        assetsAllocatedHTML = `
+          <p class="text-xs text-gray-500 text-center py-4">이 목표에 임대되어 배정된 가용 자산이 없습니다.</p>
+        `;
+      } else {
+        details.forEach(item => {
+          assetsAllocatedHTML += `
+            <div class="flex items-center justify-between p-3 bg-bgDark rounded-xl border border-gray-800 text-xs">
+              <div>
+                <span class="font-bold text-gray-200 block">${item.assetName}</span>
+                <span class="text-[10px] text-gray-500">우선순위 분배 규칙에 의해 할당</span>
+              </div>
+              <span class="font-bold text-white font-num">${formatWon(item.amount)}</span>
+            </div>
+          `;
+        });
+      }
+
+      targetEl.innerHTML = `
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Summary Target Gauge -->
+          <div class="lg:col-span-2 bg-surfaceDark p-6 rounded-2xl border border-gray-800 space-y-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-[10px] text-accentTeal font-bold uppercase">순위 ${idx+1} 목표 분석</span>
+                <h3 class="font-bold text-white text-lg mt-1">${g.name}</h3>
+              </div>
+              <span class="text-xs text-gray-400 font-num">기한: ${g.targetDate}</span>
+            </div>
+
+            <!-- Main Big Stats -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-bgDark p-4 rounded-xl border border-gray-800/60 text-center">
+              <div>
+                <span class="text-xs text-gray-500">부족 금액</span>
+                <span class="block text-xl font-bold text-white mt-1 font-num">${formatWonShort(shortage)}</span>
+              </div>
+              <div class="border-t sm:border-t-0 sm:border-l border-gray-800/80 pt-3 sm:pt-0">
+                <span class="text-xs text-amber-500 font-medium">달성까지 월 필요 저축량</span>
+                <span class="block text-xl font-bold text-amber-400 mt-1 font-num">${monthlyNeeded > 0 ? formatWon(monthlyNeeded) : '달성 완료!'}</span>
+              </div>
+            </div>
+
+            <!-- Progression Track -->
+            <div class="space-y-2">
+              <div class="flex justify-between text-xs">
+                <span class="text-gray-400">목표 진행률</span>
+                <span class="font-bold text-white font-num">${pct}%</span>
+              </div>
+              <div class="w-full bg-bgDark rounded-full h-3">
+                <div class="bg-accentTeal h-3 rounded-full transition-all duration-700" style="width: ${pct}%"></div>
+              </div>
+              <div class="flex justify-between text-[10px] text-gray-500">
+                <span>모아진 자산: ${formatWon(goalAlloc)}</span>
+                <span>최종 목표: ${formatWon(g.amount)}</span>
+              </div>
+            </div>
+
+            <!-- Milestone Milestones -->
+            <div class="space-y-2">
+              <span class="text-xs text-gray-400 font-medium block">달성 이정표 (Milestones)</span>
+              <div class="grid grid-cols-4 gap-2 text-center text-[10px]">
+                <div class="p-2.5 rounded-xl ${ms25} font-medium">25% 돌파</div>
+                <div class="p-2.5 rounded-xl ${ms50} font-medium">50% 반환점</div>
+                <div class="p-2.5 rounded-xl ${ms75} font-medium">75% 고지</div>
+                <div class="p-2.5 rounded-xl ${ms100} font-medium">100% 달성</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Allocation Details Waterfall List -->
+          <div class="bg-surfaceDark p-6 rounded-2xl border border-gray-800 flex flex-col">
+            <h4 class="font-bold text-white text-sm mb-2">워터폴 배정 자산 명세</h4>
+            <p class="text-xs text-gray-400 mb-4 leading-relaxed">우선순위 워터폴 계산 규칙에 따라 현재 타겟에 우선 매칭 적용되어 있는 계좌 내 자산입니다.</p>
+            
+            <div class="flex-1 space-y-2 overflow-y-auto max-h-60 pr-1">
+              ${assetsAllocatedHTML}
+            </div>
+          </div>
+
+        </div>
+      `;
+    }
+
+
+    // --- F4: ASSETS & ACCOUNTS MANAGEMENT RENDERING ---
+    function renderAssets() {
+      const container = document.getElementById('assets-accounts-list');
+      if (!container) return;
+
+      container.innerHTML = '';
+      const summary = getSnapshotSummary(appState.selectedSnapshotMonth);
+
+      if (appState.accounts.length === 0) {
+        container.innerHTML = `
+          <div class="bg-surfaceDark p-8 rounded-2xl border border-gray-800 text-center text-xs text-gray-500 space-y-3">
+            <p>계좌 및 구성 자산이 없습니다. 먼저 자금을 보관 중인 은행/증권 계좌를 개설해 주세요.</p>
+            <button onclick="openAccountModal()" class="bg-accentTeal hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition">
+              계좌 새로 추가하기
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      appState.accounts.forEach(acc => {
+        const div = document.createElement('div');
+        div.className = 'bg-surfaceDark rounded-2xl border border-gray-800 overflow-hidden';
+        
+        let assetsSum = 0;
+        let assetsRows = '';
+
+        if (acc.assets.length === 0) {
+          assetsRows = `
+            <tr>
+              <td colspan="5" class="p-4 text-center text-xs text-gray-500">등록된 보유 자산이 없습니다. [자산 추가]를 통해 세부 종목을 추가하세요.</td>
+            </tr>
+          `;
+        } else {
+          acc.assets.forEach(ast => {
+            const balance = summary.byAsset[ast.id] !== undefined ? summary.byAsset[ast.id] : ast.amount;
+            assetsSum += balance;
+
+            // Group styling color
+            let groupLabel = '';
+            let groupBg = '';
+            if (ast.group === 'STOCK') { groupLabel = '주식'; groupBg = 'bg-assetStock/10 text-assetStock border border-assetStock/20'; }
+            else if (ast.group === 'BOND') { groupLabel = '채권'; groupBg = 'bg-assetBond/10 text-assetBond border border-assetBond/20'; }
+            else if (ast.group === 'GOLD') { groupLabel = '금'; groupBg = 'bg-assetGold/10 text-assetGold border border-assetGold/20'; }
+            else { groupLabel = '현금'; groupBg = 'bg-assetCash/10 text-assetCash border border-assetCash/20'; }
+
+            // Availability Badge
+            let availLabel = '';
+            let availBg = '';
+            if (ast.availability === 'INSTANT') { availLabel = '즉시 가용'; availBg = 'bg-emerald-950 text-emerald-400 border border-emerald-500/20'; }
+            else if (ast.availability === 'CONDITIONAL') { availLabel = '조건부'; availBg = 'bg-blue-950 text-blue-400 border border-blue-500/20'; }
+            else { availLabel = '잠김 (비유동)'; availBg = 'bg-zinc-800 text-zinc-400'; }
+
+            assetsRows += `
+              <tr class="hover:bg-bgDark/20 text-xs text-gray-300">
+                <td class="p-4 font-bold text-white">${ast.name}</td>
+                <td class="p-4">
+                  <span class="px-2.5 py-0.5 rounded text-[10px] font-medium ${groupBg}">${groupLabel}</span>
+                </td>
+                <td class="p-4">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-medium ${availBg}">${availLabel}</span>
+                </td>
+                <td class="p-4 text-right font-bold text-white font-num">${formatWon(balance)}</td>
+                <td class="p-4 text-right flex justify-end gap-1.5">
+                  <button onclick="openAssetModal('${acc.id}', '${ast.id}')" class="p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-white transition">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                  <button onclick="deleteAsset('${acc.id}', '${ast.id}')" class="p-1.5 hover:bg-red-950/40 rounded text-red-400 hover:text-red-300 transition">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                </td>
+              </tr>
+            `;
+          });
+        }
+
+        div.innerHTML = `
+          <!-- Account Header Panel -->
+          <div class="px-5 py-4 bg-bgDark/50 border-b border-gray-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="font-bold text-white text-sm">${acc.name}</h3>
+              <p class="text-[10px] text-gray-400 mt-0.5 font-num">계좌 총 합계: ${formatWon(assetsSum)}</p>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+              <button onclick="openAssetModal('${acc.id}')" class="bg-gray-800 hover:bg-gray-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1">
+                <i class="fa-solid fa-plus text-[10px]"></i>
+                <span>자산 추가</span>
+              </button>
+              <button onclick="openAccountModal('${acc.id}')" class="p-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition text-xs">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button onclick="deleteAccount('${acc.id}')" class="p-1.5 bg-red-950/40 hover:bg-red-900/50 text-red-400 rounded-lg transition text-xs">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Assets Table Inside -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-bgDark/20 text-gray-400 border-b border-gray-800 text-[10px] font-semibold uppercase tracking-wider">
+                  <th class="p-4">자산명</th>
+                  <th class="p-4">자산군</th>
+                  <th class="p-4">가용성</th>
+                  <th class="p-4 text-right">금액</th>
+                  <th class="p-4 text-right">수정/삭제</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-800/40">
+                ${assetsRows}
+              </tbody>
+            </table>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+
+    // --- F6: PORTFOLIO REBALANCING RENDERING ---
+    function renderRebalance() {
+      const summary = getSnapshotSummary(appState.selectedSnapshotMonth);
+      const targets = appState.rebalanceTargets;
+
+      // Filter assets flagged with `isRebalance` (only count those into rebalancing calculation)
+      let currentRebalanceTotal = 0;
+      const currentTotals = { STOCK: 0, BOND: 0, GOLD: 0, CASH: 0 };
+
+      appState.accounts.forEach(acc => {
+        acc.assets.forEach(ast => {
+          if (ast.isRebalance) {
+            const balance = summary.byAsset[ast.id] !== undefined ? summary.byAsset[ast.id] : ast.amount;
+            currentRebalanceTotal += balance;
+            currentTotals[ast.group] += balance;
+          }
+        });
+      });
+
+      // Render Ratio Comparisons Progress Chart
+      const chartContainer = document.getElementById('rebalance-ratio-chart');
+      if (!chartContainer) return;
+
+      chartContainer.innerHTML = '';
+
+      if (currentRebalanceTotal === 0) {
+        chartContainer.innerHTML = `
+          <p class="text-xs text-gray-500 text-center py-6">
+            현재 리밸런싱 대상 자산 총액이 0원입니다.<br>
+            [자산 관리] 탭에서 자산들의 '리밸런싱 조정에 포함' 플래그를 확인하세요.
+          </p>
+        `;
+        document.getElementById('rebalance-recommendations').innerHTML = `
+          <p class="text-xs text-gray-500 text-center py-6">산출 대상 자산 데이터가 비어 있습니다.</p>
+        `;
+        return;
+      }
+
+      const groups = [
+        { id: 'STOCK', label: '주식 (Stock)', color: 'bg-assetStock', current: currentTotals.STOCK, targetPct: targets.STOCK },
+        { id: 'BOND', label: '채권 (Bond)', color: 'bg-assetBond', current: currentTotals.BOND, targetPct: targets.BOND },
+        { id: 'GOLD', label: '금 (Gold)', color: 'bg-assetGold', current: currentTotals.GOLD, targetPct: targets.GOLD },
+        { id: 'CASH', label: '현금 (Cash)', color: 'bg-assetCash', current: currentTotals.CASH, targetPct: targets.CASH }
+      ];
+
+      groups.forEach(g => {
+        const curPct = currentRebalanceTotal > 0 ? (g.current / currentRebalanceTotal * 100) : 0;
+        const diffPct = curPct - g.targetPct;
+
+        const row = document.createElement('div');
+        row.className = 'space-y-1.5';
+        row.innerHTML = `
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-bold text-gray-300 flex items-center gap-1.5">
+              <span class="inline-block w-2.5 h-2.5 rounded-sm ${g.color}"></span>
+              <span>${g.label}</span>
+            </span>
+            <span class="text-gray-400 font-num">
+              현재 <b class="text-white">${curPct.toFixed(1)}%</b> (${formatWonShort(g.current)})
+              / 목표 <b class="text-white">${g.targetPct}%</b>
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <!-- Double visual comparison bar -->
+            <div class="flex-1 space-y-1">
+              <div class="w-full bg-bgDark rounded-full h-1.5">
+                <div class="${g.color} h-1.5 rounded-full" style="width: ${curPct}%"></div>
+              </div>
+              <div class="w-full bg-bgDark rounded-full h-1">
+                <div class="bg-gray-600 h-1 rounded-full" style="width: ${g.targetPct}%"></div>
+              </div>
+            </div>
+            <span class="text-[10px] font-bold shrink-0 w-12 text-right font-num ${diffPct > 0 ? 'text-increaseGreen' : diffPct < 0 ? 'text-decreaseRed' : 'text-gray-400'}">
+              ${diffPct > 0 ? `+${diffPct.toFixed(1)}%` : diffPct < 0 ? `${diffPct.toFixed(1)}%` : '0.0%'}
+            </span>
+          </div>
+        `;
+        chartContainer.appendChild(row);
+      });
+
+      // Render Trade recommendations adjustments
+      const recContainer = document.getElementById('rebalance-recommendations');
+      recContainer.innerHTML = '';
+
+      let requiresAdjustment = false;
+
+      groups.forEach(g => {
+        const targetValue = Math.round(currentRebalanceTotal * (g.targetPct / 100));
+        const adjustValue = targetValue - g.current;
+        
+        if (Math.abs(adjustValue) >= 1000) { // Threshold over 1000 won to qualify as a trade action
+          requiresAdjustment = true;
+
+          let adjustText = '';
+          let adjustBadge = '';
+
+          if (adjustValue > 0) {
+            adjustText = `<span class="text-increaseGreen font-bold font-num">+${formatWon(adjustValue)}</span> 매수(저축 추가) 필요`;
+            adjustBadge = `<span class="text-[10px] bg-increaseGreen/10 text-increaseGreen border border-increaseGreen/20 px-2 py-0.5 rounded font-bold shrink-0">매수 추가</span>`;
+          } else {
+            adjustText = `<span class="text-decreaseRed font-bold font-num">-${formatWon(Math.abs(adjustValue))}</span> 매도(인출/조정) 필요`;
+            adjustBadge = `<span class="text-[10px] bg-decreaseRed/10 text-decreaseRed border border-decreaseRed/20 px-2 py-0.5 rounded font-bold shrink-0">매도 축소</span>`;
+          }
+
+          const card = document.createElement('div');
+          card.className = 'flex items-center justify-between p-3.5 bg-bgDark rounded-xl border border-gray-800 text-xs';
+          card.innerHTML = `
+            <div class="space-y-1">
+              <span class="text-[10px] text-gray-500 block">${g.label}</span>
+              <p class="text-gray-300">${adjustText}</p>
+            </div>
+            ${adjustBadge}
+          `;
+          recContainer.appendChild(card);
+        }
+      });
+
+      if (!requiresAdjustment) {
+        recContainer.innerHTML = `
+          <div class="text-center py-6 text-xs text-gray-500 space-y-2">
+            <p>🎉 자산 비중이 목표 범위 내로 대단히 조화롭게 유지되고 있습니다!</p>
+            <p class="text-[10px]">수정 혹은 조정 거래가 요구되지 않습니다.</p>
+          </div>
+        `;
+      }
+    }
+
+
+    // ==================== CONTROLLER DIALOG EVENTS ====================
+
+    // Account CRUD
+    function openAccountModal(accId = '') {
+      const modal = document.getElementById('account-modal');
+      const title = document.getElementById('account-modal-title');
+      const form = document.getElementById('account-form');
+      
+      form.reset();
+      document.getElementById('account-id').value = accId;
+
+      if (accId) {
+        title.textContent = '계좌 정보 편집';
+        const acc = appState.accounts.find(x => x.id === accId);
+        if (acc) {
+          document.getElementById('account-name').value = acc.name;
+        }
+      } else {
+        title.textContent = '계좌 추가 개설';
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeAccountModal() {
+      document.getElementById('account-modal').classList.add('hidden');
+    }
+
+    function saveAccount(e) {
+      e.preventDefault();
+      const id = document.getElementById('account-id').value;
+      const name = document.getElementById('account-name').value;
+
+      if (id) {
+        // Edit mode
+        const acc = appState.accounts.find(x => x.id === id);
+        if (acc) {
+          acc.name = name;
+          showToast(`계좌명이 '${name}'(으)로 갱신되었습니다.`);
+        }
+      } else {
+        // Add mode
+        const newAcc = {
+          id: 'acc_' + Date.now(),
+          name: name,
+          assets: []
+        };
+        appState.accounts.push(newAcc);
+        showToast(`새로운 계좌 '${name}'이(가) 추가 등록되었습니다.`);
+      }
+
+      saveState();
+      closeAccountModal();
+      updateUIRenderings();
+    }
+
+    function deleteAccount(accId) {
+      const acc = appState.accounts.find(x => x.id === accId);
+      if (!acc) return;
+
+      const confirmDelete = confirm(`이 계좌(${acc.name})와 계좌 내부의 모든 보유 자산이 영구적으로 제거됩니다.\n정말로 삭제하시겠습니까?`);
+      if (confirmDelete) {
+        appState.accounts = appState.accounts.filter(x => x.id !== accId);
+        saveState();
+        updateUIRenderings();
+        showToast("계좌 및 하위 자산들이 모두 삭제되었습니다.", "error");
+      }
+    }
+
+    // Asset CRUD
+    function openAssetModal(accId, astId = '') {
+      const modal = document.getElementById('asset-modal');
+      const title = document.getElementById('asset-modal-title');
+      const form = document.getElementById('asset-form');
+
+      form.reset();
+      document.getElementById('asset-account-id').value = accId;
+      document.getElementById('asset-id').value = astId;
+
+      if (astId) {
+        title.textContent = '보유 자산 구성 정보 편집';
+        const acc = appState.accounts.find(x => x.id === accId);
+        const ast = acc?.assets.find(x => x.id === astId);
+        if (ast) {
+          document.getElementById('asset-name').value = ast.name;
+          document.getElementById('asset-group').value = ast.group;
+          document.getElementById('asset-availability').value = ast.availability;
+          document.getElementById('asset-amount').value = ast.amount;
+          document.getElementById('asset-is-rebalance').checked = ast.isRebalance;
+        }
+      } else {
+        title.textContent = '새로운 자산 종목 추가';
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeAssetModal() {
+      document.getElementById('asset-modal').classList.add('hidden');
+    }
+
+    function saveAsset(e) {
+      e.preventDefault();
+      const accId = document.getElementById('asset-account-id').value;
+      const astId = document.getElementById('asset-id').value;
+
+      const name = document.getElementById('asset-name').value;
+      const group = document.getElementById('asset-group').value;
+      const availability = document.getElementById('asset-availability').value;
+      const amount = parseFloat(document.getElementById('asset-amount').value) || 0;
+      const isRebalance = document.getElementById('asset-is-rebalance').checked;
+
+      const acc = appState.accounts.find(x => x.id === accId);
+      if (!acc) return;
+
+      if (astId) {
+        const ast = acc.assets.find(x => x.id === astId);
+        if (ast) {
+          ast.name = name;
+          ast.group = group;
+          ast.availability = availability;
+          ast.amount = amount;
+          ast.isRebalance = isRebalance;
+          showToast(`자산 '${name}' 구성 정보가 정상적으로 저장되었습니다.`);
+        }
+      } else {
+        const newAst = {
+          id: 'ast_' + Date.now(),
+          name: name,
+          group: group,
+          availability: availability,
+          amount: amount,
+          isRebalance: isRebalance
+        };
+        acc.assets.push(newAst);
+        showToast(`성공적으로 신규 자산 '${name}'이(가) 추가 등록되었습니다.`);
+      }
+
+      saveState();
+      closeAssetModal();
+      updateUIRenderings();
+    }
+
+    function deleteAsset(accId, astId) {
+      const acc = appState.accounts.find(x => x.id === accId);
+      const ast = acc?.assets.find(x => x.id === astId);
+      if (!ast) return;
+
+      const confirmDelete = confirm(`정말 보유 중인 자산 '${ast.name}' 종목을 이 계좌에서 영구 제명하시겠습니까?`);
+      if (confirmDelete) {
+        acc.assets = acc.assets.filter(x => x.id !== astId);
+        saveState();
+        updateUIRenderings();
+        showToast("자산이 정상적으로 영구 삭제되었습니다.", "error");
+      }
+    }
+
+    // Goals CRUD
+    function openGoalModal(goalId = '') {
+      const modal = document.getElementById('goal-modal');
+      const title = document.getElementById('goal-modal-title');
+      const form = document.getElementById('goal-form');
+
+      form.reset();
+      document.getElementById('goal-id').value = goalId;
+
+      if (goalId) {
+        title.textContent = '재무 저축 목표 설정 수정';
+        const g = appState.goals.find(x => x.id === goalId);
+        if (g) {
+          document.getElementById('goal-name').value = g.name;
+          document.getElementById('goal-amount').value = g.amount;
+          document.getElementById('goal-target-date').value = g.targetDate;
+        }
+      } else {
+        title.textContent = '새로운 재무 목표 수립';
+        // Set default minimum month limit (current datetime + 1 month)
+        document.getElementById('goal-target-date').value = "2027-12";
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeGoalModal() {
+      document.getElementById('goal-modal').classList.add('hidden');
+    }
+
+    function saveGoal(e) {
+      e.preventDefault();
+      const id = document.getElementById('goal-id').value;
+      const name = document.getElementById('goal-name').value;
+      const amount = parseFloat(document.getElementById('goal-amount').value) || 0;
+      const targetDate = document.getElementById('goal-target-date').value;
+
+      if (id) {
+        const g = appState.goals.find(x => x.id === id);
+        if (g) {
+          g.name = name;
+          g.amount = amount;
+          g.targetDate = targetDate;
+          showToast(`목표 '${name}' 설정 사항이 갱신되었습니다.`);
+        }
+      } else {
+        const newGoal = {
+          id: 'gol_' + Date.now(),
+          name: name,
+          amount: amount,
+          targetDate: targetDate
+        };
+        appState.goals.push(newGoal);
+        showToast(`새로운 저축 목적지 '${name}' 목표를 등록했습니다!`);
+      }
+
+      saveState();
+      closeGoalModal();
+      updateUIRenderings();
+    }
+
+    function deleteGoal(goalId) {
+      const g = appState.goals.find(x => x.id === goalId);
+      if (!g) return;
+
+      const confirmDelete = confirm(`정말 수립한 미래 자산 저축 목표 '${g.name}'를 영구 파기하시겠습니까?`);
+      if (confirmDelete) {
+        appState.goals = appState.goals.filter(x => x.id !== goalId);
+        saveState();
+        updateUIRenderings();
+        showToast("재무 목표를 목록에서 삭제했습니다.", "error");
+      }
+    }
+
+
+    // --- F4: MONTHLY SNAPSHOT BATCH WRAPPER DIALOG ---
+    function openSnapshotEntryModal() {
+      const modal = document.getElementById('snapshot-modal');
+      
+      // Default to target active selected month or present date format
+      document.getElementById('snapshot-entry-month').value = appState.selectedSnapshotMonth || CURRENT_DATETIME.substring(0, 7);
+      
+      loadSnapshotFormBalances();
+      modal.classList.remove('hidden');
+    }
+
+    function closeSnapshotEntryModal() {
+      document.getElementById('snapshot-modal').classList.add('hidden');
+    }
+
+    function loadSnapshotFormBalances() {
+      const targetMonth = document.getElementById('snapshot-entry-month').value;
+      const container = document.getElementById('snapshot-entry-assets-list');
+      if (!container) return;
+
+      container.innerHTML = '';
+
+      if (appState.accounts.length === 0) {
+        container.innerHTML = `
+          <p class="text-xs text-gray-500 text-center py-6">
+            등록된 자산 정보가 발견되지 않았습니다. 자산 관리 탭에서 자산을 먼저 등록해 주세요.
+          </p>
+        `;
+        return;
+      }
+
+      // Check if snapshot exists for designated targetMonth
+      const activeSnap = appState.snapshots[targetMonth];
+
+      appState.accounts.forEach(acc => {
+        const section = document.createElement('div');
+        section.className = 'space-y-3 p-4 bg-bgDark/40 rounded-xl border border-gray-800/60';
+        section.innerHTML = `<h4 class="text-xs font-bold text-accentTeal mb-1 border-b border-gray-800 pb-1.5">${acc.name}</h4>`;
+
+        acc.assets.forEach(ast => {
+          // Priority fallback: snapshot log -> asset primary amount metric
+          let balanceValue = ast.amount;
+          if (activeSnap && activeSnap.assetBalances[ast.id] !== undefined) {
+            balanceValue = activeSnap.assetBalances[ast.id];
+          }
+
+          const assetInputWrap = document.createElement('div');
+          assetInputWrap.className = 'flex flex-col sm:flex-row sm:items-center justify-between gap-2';
+          assetInputWrap.innerHTML = `
+            <div class="space-y-0.5">
+              <span class="text-xs text-white font-medium block">${ast.name}</span>
+              <span class="text-[10px] text-gray-400 block">${ast.group} / ${ast.availability}</span>
+            </div>
+            <div class="relative max-w-xs w-full">
+              <input type="number" name="snap-ast-${ast.id}" value="${balanceValue}" min="0" class="snap-asset-input w-full bg-bgDark border border-gray-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accentTeal pr-8 text-right font-num">
+              <span class="absolute right-3 top-2 text-[10px] text-gray-400">원</span>
+            </div>
+          `;
+          section.appendChild(assetInputWrap);
+        });
+
+        container.appendChild(section);
+      });
+    }
+
+    function prefillSnapshotFromCurrent() {
+      // Find latest prior snapshot month index
+      const targetMonth = document.getElementById('snapshot-entry-month').value;
+      const sortedMonths = getSortedSnapshotMonths();
+      const currentIdx = sortedMonths.indexOf(targetMonth);
+
+      let sourceBalances = {};
+
+      if (currentIdx > 0) {
+        // Fetch from immediate predecessor
+        const prevMonth = sortedMonths[currentIdx - 1];
+        sourceBalances = appState.snapshots[prevMonth]?.assetBalances || {};
+        showToast(`${prevMonth}월의 이력 데이터 잔액을 성공적으로 당겨왔습니다.`);
+      } else {
+        // Pre-fill directly from fundamental parameters inside accounts list
+        appState.accounts.forEach(acc => {
+          acc.assets.forEach(ast => {
+            sourceBalances[ast.id] = ast.amount;
+          });
+        });
+        showToast("자산 목록에 정의된 기본 기준액으로 기입 프리필을 완료했습니다.");
+      }
+
+      // Populate input forms
+      for (const [astId, value] of Object.entries(sourceBalances)) {
+        const input = document.querySelector(`input[name="snap-ast-${astId}"]`);
+        if (input) input.value = value;
+      }
+    }
+
+    function saveMonthlySnapshot(e) {
+      e.preventDefault();
+      const targetMonth = document.getElementById('snapshot-entry-month').value;
+      if (!targetMonth) {
+        showToast("정확한 대상 연월을 기록해 주세요.", "error");
+        return;
+      }
+
+      const inputElements = document.querySelectorAll('.snap-asset-input');
+      const assetBalances = {};
+      let totalSum = 0;
+
+      inputElements.forEach(input => {
+        const nameAttr = input.getAttribute('name'); // "snap-ast-ast_1"
+        const assetId = nameAttr.replace('snap-ast-', '');
+        const val = parseFloat(input.value) || 0;
+        assetBalances[assetId] = val;
+        totalSum += val;
+
+        // Also update fundamental base asset definitions (F4 requirement update baseline)
+        appState.accounts.forEach(acc => {
+          const matched = acc.assets.find(x => x.id === assetId);
+          if (matched) matched.amount = val;
+        });
+      });
+
+      // Commit to snapshots registry
+      appState.snapshots[targetMonth] = {
+        totalAssets: totalSum,
+        assetBalances: assetBalances
+      };
+
+      appState.selectedSnapshotMonth = targetMonth;
+      saveState();
+      closeSnapshotEntryModal();
+      updateUIRenderings();
+
+      showToast(`${targetMonth}월 말 스냅샷이 안전하게 저장 및 적용되었습니다!`);
+    }
+
+
+    // --- F6: REBALANCE CONFIGURE SLIDERS CONTROLLER ---
+    function openRebalanceConfigModal() {
+      const modal = document.getElementById('rebalance-config-modal');
+      const targets = appState.rebalanceTargets;
+
+      document.getElementById('rebalance-range-stock').value = targets.STOCK;
+      document.getElementById('rebalance-range-bond').value = targets.BOND;
+      document.getElementById('rebalance-range-gold').value = targets.GOLD;
+      document.getElementById('rebalance-range-cash').value = targets.CASH;
+
+      updateRebalanceConfigLabels();
+      modal.classList.remove('hidden');
+    }
+
+    function closeRebalanceConfigModal() {
+      document.getElementById('rebalance-config-modal').classList.add('hidden');
+    }
+
+    function updateRebalanceConfigLabels() {
+      const stock = parseInt(document.getElementById('rebalance-range-stock').value) || 0;
+      const bond = parseInt(document.getElementById('rebalance-range-bond').value) || 0;
+      const gold = parseInt(document.getElementById('rebalance-range-gold').value) || 0;
+      const cash = parseInt(document.getElementById('rebalance-range-cash').value) || 0;
+
+      document.getElementById('rebalance-label-stock').textContent = `${stock}%`;
+      document.getElementById('rebalance-label-bond').textContent = `${bond}%`;
+      document.getElementById('rebalance-label-gold').textContent = `${gold}%`;
+      document.getElementById('rebalance-label-cash').textContent = `${cash}%`;
+
+      const sum = stock + bond + gold + cash;
+      const sumEl = document.getElementById('rebalance-config-sum');
+      sumEl.textContent = `${sum}%`;
+
+      if (sum === 100) {
+        sumEl.className = 'font-bold text-accentTeal font-num';
+      } else {
+        sumEl.className = 'font-bold text-red-500 font-num';
+      }
+    }
+
+    // Adjust sliders dynamically when slider slides
+    function updateRebalanceSliders(changedGroup) {
+      updateRebalanceConfigLabels();
+    }
+
+    function saveRebalanceConfig(e) {
+      e.preventDefault();
+      
+      const stock = parseInt(document.getElementById('rebalance-range-stock').value) || 0;
+      const bond = parseInt(document.getElementById('rebalance-range-bond').value) || 0;
+      const gold = parseInt(document.getElementById('rebalance-range-gold').value) || 0;
+      const cash = parseInt(document.getElementById('rebalance-range-cash').value) || 0;
+
+      const sum = stock + bond + gold + cash;
+      if (sum !== 100) {
+        showToast("비중 구성의 합계는 100%가 되어야 저장이 허용됩니다.", "error");
+        return;
+      }
+
+      appState.rebalanceTargets = {
+        STOCK: stock,
+        BOND: bond,
+        GOLD: gold,
+        CASH: cash
+      };
+
+      saveState();
+      closeRebalanceConfigModal();
+      updateUIRenderings();
+      showToast("목표 포트폴리오 자산 배분 비율이 무사히 조율 저장되었습니다.");
+    }
+
+
+    // ==================== F5 EXCEL DATA EXPORT & IMPORT MODULE (SheetJS Integration) ====================
+    
+    // Backup: Export State payload into structured multi-sheet Excel file (.xlsx)
+    function exportToExcel() {
+      try {
+        const wb = XLSX.utils.book_new();
+
+        // 1. Sheet: Accounts List
+        const accountsRows = [];
+        appState.accounts.forEach(acc => {
+          acc.assets.forEach(ast => {
+            accountsRows.push({
+              "계좌 ID": acc.id,
+              "계좌명": acc.name,
+              "자산 ID": ast.id,
+              "자산명": ast.name,
+              "자산군 (STOCK/BOND/GOLD/CASH)": ast.group,
+              "가용 등급 (INSTANT/CONDITIONAL/LOCKED)": ast.availability,
+              "기본금액 (원)": ast.amount,
+              "리밸런싱 참여여부 (TRUE/FALSE)": ast.isRebalance ? "TRUE" : "FALSE"
+            });
+          });
+        });
+        const wsAccounts = XLSX.utils.json_to_sheet(accountsRows);
+        XLSX.utils.book_append_sheet(wb, wsAccounts, "계좌및자산목록");
+
+        // 2. Sheet: Goals List
+        const goalsRows = appState.goals.map((g, idx) => ({
+          "우선순위": idx + 1,
+          "목표 ID": g.id,
+          "목표명": g.name,
+          "목표 금액": g.amount,
+          "달성기한 (YYYY-MM)": g.targetDate
+        }));
+        const wsGoals = XLSX.utils.json_to_sheet(goalsRows);
+        XLSX.utils.book_append_sheet(wb, wsGoals, "재무목표목록");
+
+        // 3. Sheet: Monthly Snapshots
+        const snapshotsRows = [];
+        for (const [month, data] of Object.entries(appState.snapshots)) {
+          for (const [astId, bal] of Object.entries(data.assetBalances)) {
+            snapshotsRows.push({
+              "기준월 (YYYY-MM)": month,
+              "자산 ID": astId,
+              "기록잔액": bal
+            });
+          }
+        }
+        const wsSnapshots = XLSX.utils.json_to_sheet(snapshotsRows);
+        XLSX.utils.book_append_sheet(wb, wsSnapshots, "월별스냅샷기록");
+
+        // 4. Sheet: Rebalancing configuration preset
+        const presetRows = [
+          { "자산군": "주식 (STOCK)", "목표비중 (%)": appState.rebalanceTargets.STOCK },
+          { "자산군": "채권 (BOND)", "목표비중 (%)": appState.rebalanceTargets.BOND },
+          { "자산군": "금 (GOLD)", "목표비중 (%)": appState.rebalanceTargets.GOLD },
+          { "자산군": "현금 (CASH)", "목표비중 (%)": appState.rebalanceTargets.CASH }
+        ];
+        const wsPreset = XLSX.utils.json_to_sheet(presetRows);
+        XLSX.utils.book_append_sheet(wb, wsPreset, "리밸런싱비중설정");
+
+        // Write and trigger download
+        XLSX.writeFile(wb, `모아보드_자산백업_${CURRENT_DATETIME}.xlsx`);
+        showToast("모든 자산 대시보드 내역을 포함한 .xlsx 백업 파일이 다운로드되었습니다.");
+      } catch (err) {
+        console.error(err);
+        showToast("백업 파일을 추출하는 데 실패했습니다.", "error");
+      }
+    }
+
+    // Restore: Import Excel backup payload back into operational runtime variables state
+    function importFromExcel(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+
+          const newAccounts = [];
+          const newGoals = [];
+          const newSnapshots = {};
+          let newRebalanceTargets = { STOCK: 40, BOND: 40, GOLD: 10, CASH: 10 };
+
+          // --- Parse 1. Accounts sheet ---
+          const sheetAccounts = workbook.Sheets["계좌및자산목록"];
+          if (sheetAccounts) {
+            const list = XLSX.utils.sheet_to_json(sheetAccounts);
+            list.forEach(row => {
+              const accId = row["계좌 ID"];
+              const accName = row["계좌명"];
+              const astId = row["자산 ID"];
+              const astName = row["자산명"];
+              const group = row["자산군 (STOCK/BOND/GOLD/CASH)"];
+              const availability = row["가용 등급 (INSTANT/CONDITIONAL/LOCKED)"];
+              const amount = parseFloat(row["기본금액 (원)"]) || 0;
+              const isRebalance = row["리밸런싱 참여여부 (TRUE/FALSE)"] === "TRUE";
+
+              if (!accId || !accName) return;
+
+              let acc = newAccounts.find(x => x.id === accId);
+              if (!acc) {
+                acc = { id: accId, name: accName, assets: [] };
+                newAccounts.push(acc);
+              }
+
+              if (astId && astName) {
+                acc.assets.push({
+                  id: astId,
+                  name: astName,
+                  group: group || "CASH",
+                  availability: availability || "INSTANT",
+                  amount: amount,
+                  isRebalance: isRebalance
+                });
+              }
+            });
+          }
+
+          // --- Parse 2. Goals sheet ---
+          const sheetGoals = workbook.Sheets["재무목표목록"];
+          if (sheetGoals) {
+            const list = XLSX.utils.sheet_to_json(sheetGoals);
+            // Sort by priority order
+            list.sort((a, b) => (a["우선순위"] || 99) - (b["우선순위"] || 99));
+            list.forEach(row => {
+              if (row["목표 ID"] && row["목표명"]) {
+                newGoals.push({
+                  id: row["목표 ID"],
+                  name: row["목표명"],
+                  amount: parseFloat(row["목표 금액"]) || 1000000,
+                  targetDate: row["달성기한 (YYYY-MM)"] || "2027-12"
+                });
+              }
+            });
+          }
+
+          // --- Parse 3. Snapshots sheet ---
+          const sheetSnapshots = workbook.Sheets["월별스냅샷기록"];
+          if (sheetSnapshots) {
+            const list = XLSX.utils.sheet_to_json(sheetSnapshots);
+            list.forEach(row => {
+              const month = row["기준월 (YYYY-MM)"];
+              const astId = row["자산 ID"];
+              const bal = parseFloat(row["기록잔액"]) || 0;
+
+              if (month && astId) {
+                if (!newSnapshots[month]) {
+                  newSnapshots[month] = { totalAssets: 0, assetBalances: {} };
+                }
+                newSnapshots[month].assetBalances[astId] = bal;
+              }
+            });
+
+            // Re-calculate total asset sums under each snapshot
+            for (const month of Object.keys(newSnapshots)) {
+              let total = 0;
+              for (const bal of Object.values(newSnapshots[month].assetBalances)) {
+                total += bal;
+              }
+              newSnapshots[month].totalAssets = total;
+            }
+          }
+
+          // --- Parse 4. Rebalance targets configurations ---
+          const sheetPresets = workbook.Sheets["리밸런싱비중설정"];
+          if (sheetPresets) {
+            const list = XLSX.utils.sheet_to_json(sheetPresets);
+            list.forEach(row => {
+              const type = row["자산군"];
+              const pct = parseFloat(row["목표비중 (%)"]) || 0;
+
+              if (type.includes("주식")) newRebalanceTargets.STOCK = pct;
+              else if (type.includes("채권")) newRebalanceTargets.BOND = pct;
+              else if (type.includes("금")) newRebalanceTargets.GOLD = pct;
+              else if (type.includes("현금")) newRebalanceTargets.CASH = pct;
+            });
+          }
+
+          // Commit to state if parses pass check guards
+          if (newAccounts.length === 0 && newGoals.length === 0) {
+            throw new Error("올바른 자산 데이터 시트를 해석할 수 없습니다.");
+          }
+
+          appState.accounts = newAccounts;
+          appState.goals = newGoals;
+          appState.snapshots = newSnapshots;
+          appState.rebalanceTargets = newRebalanceTargets;
+
+          const months = getSortedSnapshotMonths();
+          appState.selectedSnapshotMonth = months.length > 0 ? months[months.length - 1] : "2026-06";
+
+          saveState();
+          updateUIRenderings();
+          showToast("엑셀 백업본으로부터 모든 자산 배정 및 스냅샷들이 안전하게 복구되었습니다!");
+        } catch (err) {
+          console.error(err);
+          showToast("파일 형식을 확인해 주세요. 내보내기로 만든 .xlsx만 불러올 수 있어요.", "error");
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+      // Reset input value to allow re-importing the same file
+      event.target.value = '';
+    }
+
+    // Factory State Reset
+    function triggerFactoryReset() {
+      const ask = confirm("정말로 저장되어 있는 모든 내역을 청산하고 초기 데모용 구조체로 초기 복구를 이행하시겠습니까?");
+      if (ask) {
+        loadDemoData();
+        updateUIRenderings();
+        showToast("공장 데모 데이터 상태로 완전히 초기화되었습니다.");
+      }
+    }
+
+
+    // ==================== GENERAL CALCULATIONS UTILS ====================
+
+    function getMonthsDifference(startDateStr, endDateStr) {
+      // Inputs: "YYYY-MM" or "YYYY-MM-DD"
+      const startYear = parseInt(startDateStr.substring(0, 4));
+      const startMonth = parseInt(startDateStr.substring(5, 7));
+      
+      const endYear = parseInt(endDateStr.substring(0, 4));
+      const endMonth = parseInt(endDateStr.substring(5, 7));
+
+      return (endYear - startYear) * 12 + (endMonth - startMonth);
+    }
+
+    function getDaysLeftString(targetYearMonth) {
+      const today = new Date(CURRENT_DATETIME);
+      const target = new Date(targetYearMonth + "-01");
+      const diffTime = target - today;
+      if (diffTime < 0) return "기한초과";
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays.toString();
+    }
+  </script>
+</body>
+</html>
